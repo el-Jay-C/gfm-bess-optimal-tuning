@@ -6,9 +6,13 @@ __pycache__/
 .ipynb_checkpoints/
 .DS_Store
 
-# Logs y trayectorias pesadas
+# Logs, salidas auxiliares y trayectorias pesadas
 resultados/logs/
 resultados/trayectorias.csv
+resultados/*.txt
+resultados/*.md
+resultados/figuras/
+resultados/tablas/
 
 # Archivos internos / confidenciales / documentos del curso
 TAREA_CODEX_*.md

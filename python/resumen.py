@@ -8,11 +8,12 @@ import pandas as pd
 R = Path(__file__).resolve().parents[1] / "resultados"
 SAL = Path(sys.argv[1]) if len(sys.argv) > 1 else R.parents[1] / "Informe" / "tablas"
 SAL.mkdir(parents=True, exist_ok=True)
-NOMBRES = {"inicial": r"$\theta$ inicial", "F1_articulo": "F1 artículo", "opt_R": "Óptimo R",
-           "opt_L": "Óptimo L", "minmax": "Mín. máximo", "minmax_F4": "Mín. máximo (F4)",
-           "esperado": "Valor esperado", "cvar": "CVaR", "cvar80": "CVaR",
-           "afin": "Regla afín", "afin_minmax": "Regla afín"}
-FORM = {"F1": "F1 artículo (SQP+PSO)", "F2": "F2 SQP", "F3": "F3 PSO",
+NOMBRES = {"opt_S1_carga_b5": "óptimo S1", "opt_S2_carga_b4": "óptimo S2",
+           "opt_S3_FV_baja": "óptimo S3", "inicial": r"$\theta_0$", "F1_articulo": "F1 (artículo)", "opt_R": "óptimo R",
+           "opt_L": "óptimo L", "minmax": "min--max", "minmax_F4": "min--max (F4)",
+           "esperado": "valor esperado", "cvar": "CVaR", "cvar80": "CVaR",
+           "afin": "regla afín", "afin_minmax": "regla afín"}
+FORM = {"F1": "F1 (artículo) (SQP+PSO)", "F2": "F2 SQP", "F3": "F3 PSO",
         "F4": "F4 colocación", "F4b": "F4b colocación L-BFGS", "F5": "F5 disparo múltiple"}
 TH = ["H1", "H2", "D1", "D2", "Kq1", "Kq2", "K1", "K2"]
 CAB_TH = [r"$H_1$", r"$H_2$", r"$D_1$", r"$D_2$", r"$K_{q,1}$", r"$K_{q,2}$", r"$K_1$", r"$K_2$"]
@@ -29,7 +30,7 @@ def leer(nombre):
 def texto(valor):
     return "".join({"\\": r"\textbackslash{}", "_": r"\_", "%": r"\%", "&": r"\&",
                     "#": r"\#", "$": r"\$", "{": r"\{", "}": r"\}",
-                    "~": r"\textasciitilde{}", "^": r"\textasciicircum{}"}.get(c, c) for c in str(valor))
+                    "~": r"\textasciitilde{}", "^": r"\textasciicircum{}", "≤": r"$\le$", "–": "--"}.get(c, c) for c in str(valor))
 
 
 def nombre(valor):
@@ -46,7 +47,10 @@ def tabla(archivo, cabecera, filas):
     n = len(cabecera)
     if not filas:
         filas = [[rf"\multicolumn{{{n}}}{{c}}{{pendiente}}"]]
-    contenido = [r"\begin{tabular}{l" + "r" * (n - 1) + "}", r"\toprule",
+    fuentes = {"sintonias.tex": "optimos.csv, validacion.csv (metricas lim=1; violacion lim=0), certificados.csv",
+               "ablacion.tex": "ablacion.csv", "convergencia.tex": "corridas_F*.csv (mejor: 0,5 %)",
+               "robusto.tex": "robusto.csv, fuera_muestra.csv (factibilidad de trayectoria sin limitador)"}
+    contenido = ["% Fuente: " + fuentes[archivo], r"\begin{tabular}{l" + "r" * (n - 1) + "}", r"\toprule",
                  " & ".join(cabecera) + r" \\", r"\midrule"]
     contenido += [" & ".join(fila) + r" \\" for fila in filas]
     contenido += [r"\bottomrule", r"\end{tabular}"]
@@ -72,7 +76,7 @@ for _, r in opt.iterrows():
                  + [num(sin.iloc[0].get("max_violacion", np.nan)) if not sin.empty else "--",
                     num(c.zeta_min.min()) if not c.empty else "--"])
 tabla("sintonias.tex", ["Sintonía"] + CAB_TH + [r"$J$", r"$\Delta f_{max}$ [Hz]",
-      r"$I_1(T)$", r"$p_{b,1}^{pico}$", r"$\rho_1^{max}$", "Viol. (R)", r"$\zeta_{min}$"], filas)
+      r"$I_1(T)$", r"$p_{b,1}^{pico}$", r"$\rho_1^{max}$", "Viol. tray. R", r"$\zeta_{min}$"], filas)
 
 a = leer("ablacion.csv")
 filas = [[texto(r.caso)] + [num(r.get(k, np.nan)) for k in TH[:6] + ["dfmax_Hz", "J", "viol_P"]]

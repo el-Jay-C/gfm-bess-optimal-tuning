@@ -59,7 +59,8 @@ def _resolver(pr):
     for solver, opts in ((cp.CLARABEL, {}), (cp.SCS, {"eps": 1e-7, "max_iters": 50000})):
         try:
             pr.solve(solver=solver, **opts)
-            return pr.status == cp.OPTIMAL
+            if pr.status == cp.OPTIMAL:
+                return True
         except cp.error.SolverError:
             continue
     return False
