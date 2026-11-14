@@ -1,0 +1,8 @@
+# Librerías de Python para la optimización (instalar con: python -m pip install -r requirements.txt)
+numpy>=2.0
+scipy>=1.13
+pandas>=2.2
+casadi>=3.6     # incluye IPOPT
+matplotlib>=3.8
+cvxpy>=1.5      # SDP del certificado de estabilidad
+clarabel>=0.9

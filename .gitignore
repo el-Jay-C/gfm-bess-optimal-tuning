@@ -1,0 +1,19 @@
+# Entornos virtuales y caché
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+.DS_Store
+
+# Logs y trayectorias pesadas
+resultados/logs/
+resultados/trayectorias.csv
+
+# Archivos internos / confidenciales / documentos del curso
+TAREA_CODEX_*.md
+Informe/
+*.pdf
+*.pptx
+CONTINUAR.md
+Lista_de_mejoras.md
