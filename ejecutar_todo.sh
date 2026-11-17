@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Ejecuta el lote v3 desde Codigos_final/, cinco procesos con un hilo cada uno.
-set -euo pipefail
+set -uo pipefail   # sin -e: un experimento fallido queda en su log y el resto sigue hasta TERMINADO
 cd "$(dirname "$0")"
 if [ -z "${PY:-}" ]; then
   for cand in ../Codigos/.venv/bin/python .venv/bin/python ../.venv/bin/python ../Codigos/.venv/Scripts/python.exe .venv/Scripts/python.exe; do

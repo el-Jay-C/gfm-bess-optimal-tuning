@@ -33,7 +33,7 @@ class ProblemaCN:
         """escs: datos de los escenarios (para las restricciones estáticas); idx: sus índices en el oráculo.
         xi: valor de la condición observable de cada escenario (activa la regla afín).
         reserva: fracción de energía reservada (por defecto la del archivo de parámetros).
-        p_max: agrega la única restricción del artículo base, P ≤ Pmax del inversor.
+        p_max: agrega las restricciones del artículo base, P ≤ Pmax del inversor y del BESS.
         eps_V: cota relativa a θ0 por escenario y modo; infinito la desactiva.
         zeta_min: amortiguamiento oscilatorio mínimo (sólo escenarios de diseño).
         margen: exige g_oráculo ≤ -margen en las restricciones de trayectoria seleccionadas."""
@@ -133,7 +133,7 @@ class ProblemaCN:
             if self.zeta_min is not None:
                 partes.append(np.array([(self.zeta(z, s) - self.zeta_min) / self.zeta_min]))
             if self.p_max:
-                partes.append(1.0 - np.array([m["p1_max"], m["p2_max"]]))
+                partes.append(1.0 - np.array([m["p1_max"], m["p2_max"], m["pb1_pico"], m["pb2_pico"]]))
         distintas = range(len(self.idx)) if self.xi is not None else [0]
         for s in distintas:
             th = self.theta(z, s)
@@ -204,13 +204,13 @@ def f1_paper(orac, p, c, esc, hist, semilla=0, n_iter_pso=1000, th0=None):
         th[idx] = lb[idx] + z * (ub - lb)[idx]
         return th
 
-    # Etapa A: SQP sobre (H, D), mínimo nadir sujeto a P ≤ Pmax del inversor
+    # Etapa A: SQP sobre (H, D), mínima Δf_max sujeto a P ≤ Pmax del inversor y P ≤ Pfv + P_ESS,max
     def fA(z):
         return orac.evaluar(con_z(z, iA, th0), esc, 0)[0]["dfmax_Hz"]
 
     def gA(z):
         m = orac.evaluar(con_z(z, iA, th0), esc, 0)[0]
-        return 1.0 - np.array([m["p1_max"], m["p2_max"]])
+        return 1.0 - np.array([m["p1_max"], m["p2_max"], m["pb1_pico"], m["pb2_pico"]])
 
     def cbA(z):
         hist.registrar(fA(z), max(0, -gA(z).min()), con_z(z, iA, th0), orac.n_eval)
