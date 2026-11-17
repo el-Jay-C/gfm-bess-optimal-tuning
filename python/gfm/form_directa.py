@@ -76,10 +76,10 @@ def _rk4(f, M):
 
 class ProblemaDirecto:
     """Construye una vez el NLP (CasADi + IPOPT) y lo resuelve desde distintos puntos iniciales.
-    La reserva de energía sólo cambia cotas de restricciones, por lo que su barrido reutiliza el solver."""
+    La reserva de energía y eps_V sólo cambian cotas de restricciones; sus barridos reutilizan el solver."""
 
     def __init__(self, p, c, escs, metodo="trapecio", modo="R", hess="exact", M=10, max_iter=1000, tol=1e-6,
-                 agregacion=None, pesos=None, alpha=0.8, factor=1, pesos_J=None):
+                 agregacion=None, pesos=None, alpha=0.8, factor=1, pesos_J=None, eps_V=None):
         o, n, b = p["optimizacion"], p["norma"], p["bess"]
         f0 = c["f0"]
         t = malla(p, factor)
@@ -87,6 +87,8 @@ class ProblemaDirecto:
         N, T = len(dt), t[-1]
         escs = [{**e, "lim": 1.0 if modo == "L" else 0.0} for e in escs]
         self.p, self.c, self.escs, self.metodo, self.modo, self.M, self.t = p, c, escs, metodo, modo, M, t
+        self.eps_V = o["eps_V"] if eps_V is None else eps_V
+        self.vdev0 = []
         self.agregacion = agregacion if len(escs) > 1 else None
         wf, wv, wl = (o["wf"], o["wv"], o["wl"]) if pesos_J is None else pesos_J
         lb, ub = limites(p)
@@ -163,6 +165,12 @@ class ProblemaDirecto:
 
             dV = (ca.sqrt(Vsq) - ca.repmat(ca.DM(c["Vpre"]), 1, N + 1)) / o["dV_ref"]
             vdev = ca.mtimes(ca.sum1(dV ** 2), wtrap) / (5 * T)
+            X0 = simular(f, e["x0"], o["theta_inicial"], t)
+            O0 = np.asarray(sal.map(N + 1)(X0, o["theta_inicial"]))
+            V0 = np.sqrt(O0[[IDX[f"V{k}sq"] for k in range(1, 6)]])
+            self.vdev0.append(float(np.sum(((V0 - c["Vpre"][:, None]) / o["dV_ref"]) ** 2, axis=0)
+                                    @ wtrap / (5 * T)))
+            agregar(vdev, -np.inf, self.eps_V * self.vdev0[-1], "V")
             perd = ca.mtimes(O[IDX["ploss"], :] - c["ploss0"], wtrap) / (T * e["dP"])
             Js.append(wf * zf / o["df_ref"] + wv * vdev + wl * perd)
 
@@ -212,8 +220,10 @@ class ProblemaDirecto:
             w0.append(float(np.max(np.abs(Og[self.fidx] - self.c["f0"]))))
         return np.array(w0 + [0.6] * self.n_extra)
 
-    def resolver(self, th0, hist=None, reserva=None):
+    def resolver(self, th0, hist=None, reserva=None, eps_V=None):
         lbg, ubg = self.lbg, self.ubg.copy()
+        if eps_V is not None:
+            ubg[self.filas["V"]] = eps_V * np.array(self.vdev0)
         if reserva is not None:
             hst = restricciones_estaticas(self.p, self.c, self.escs, reserva)[1]
             for i in range(2):
@@ -230,6 +240,9 @@ class ProblemaDirecto:
         r = {"th": np.asarray(sol["x"]).ravel()[:8], "J": float(sol["f"]), "estado": st["return_status"],
              "exito": bool(st["success"]), "iter": st["iter_count"], "t_s": t_s, "t_inicial_s": t1 - t0,
              "t_construccion_s": self.t_construccion, "n_var": self.nw, "n_res": self.ng}
+        gv = np.asarray(sol["g"]).ravel()
+        r["vdev"] = gv[self.filas["V"]].tolist()
+        r["eps"] = ubg[self.filas["V"]].tolist()
         for k, filas in self.filas.items():
             if k not in ("est", "R9"):
                 r[f"lam_{k}"] = float(lam[filas].sum())

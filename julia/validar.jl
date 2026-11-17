@@ -21,7 +21,7 @@ col(n) = findfirst(==(n), cab)
 nθ = ("H1", "H2", "D1", "D2", "Kq1", "Kq2", "K1", "K2")
 sint = map(filas[2:end]) do f
     v = split(f, ",")
-    (nombre=String(v[col("sintonia")]), θ=parse.(Float64, v[[col(n) for n in nθ]]),
+    (nombre=String(v[col("sintonia")]), modo=String(v[col("modo")]), θ=parse.(Float64, v[[col(n) for n in nθ]]),
      dθ=parse.(Float64, v[[col("d" * n) for n in nθ]]))
 end
 pfv_nom = p["gfm"]["P_fv"][2]
@@ -29,6 +29,8 @@ pfv_nom = p["gfm"]["P_fv"][2]
 θ_de(x, e) = x.θ .+ (pfv_nom - e.pfv[2] * s.S[2]) / 10.0 .* x.dθ
 TOL = 1e-3
 cs(v) = join(string.(v), ",")
+sostenidas = ("th1", "th2", "I1_fin", "I2_fin", "pb1_max", "pb2_max")
+columnas(x) = findall(n -> x.modo == "R" || !(n in sostenidas), NOMBRES_G)
 
 # ---------------------------------------------------------------- escenarios de diseño
 pares_val = [(x, e, lim) for x in sint for e in s.esc for lim in (0.0, 1.0)]
@@ -36,10 +38,11 @@ lin_val = Vector{String}(undef, length(pares_val))
 Threads.@threads for idx in eachindex(pares_val)
     x, e, lim = pares_val[idx]
     m, g = evaluar(s, merge(e, (lim=lim,)), θ_de(x, e))
-    lin_val[idx] = cs([x.nombre, e.nombre, Int(lim), m..., g..., max(0.0, maximum(g)), maximum(g) <= TOL])
+    gp = g[columnas(x)]
+    lin_val[idx] = cs([x.nombre, x.modo, e.nombre, Int(lim), m..., g..., max(0.0, maximum(gp)), maximum(gp) <= TOL])
 end
 open(joinpath(dir, "validacion.csv"), "w") do io
-    println(io, cs(["sintonia", "escenario", "lim", NOMBRES_M..., NOMBRES_G..., "max_violacion", "factible"]))
+    println(io, cs(["sintonia", "modo", "escenario", "lim", NOMBRES_M..., NOMBRES_G..., "max_violacion", "factible"]))
     foreach(l -> println(io, l), lin_val)
 end
 
@@ -50,15 +53,16 @@ ig(n) = findfirst(==(n), NOMBRES_G); im(n) = findfirst(==(n), NOMBRES_M)
 lin_den = Vector{String}(undef, length(pares_es))
 Threads.@threads for idx in eachindex(pares_es)
     x, e = pares_es[idx]
-    e0 = sin_limitador(e)
+    e0 = merge(e, (lim=x.modo == "L" ? 1.0 : 0.0,))
     m, g = evaluar(s, e0, θ_de(x, e))
     md, gd = evaluar(s, e0, θ_de(x, e); t=td, reltol=1e-10, abstol=1e-12)
-    lin_den[idx] = cs([x.nombre, e.nombre, maximum(g), maximum(gd), NOMBRES_G[argmax(gd)], m[1], md[1],
+    cols = columnas(x)
+    lin_den[idx] = cs([x.nombre, x.modo, e.nombre, maximum(g[cols]), maximum(gd[cols]), NOMBRES_G[cols[argmax(gd[cols])]], m[1], md[1],
                        m[im("dfmax_Hz")], md[im("dfmax_Hz")], m[im("I2_pico")], md[im("I2_pico")],
                        1 + g[ig("pb1_max")], 1 + gd[ig("pb1_max")]])
 end
 open(joinpath(dir, "validacion_densa.csv"), "w") do io
-    println(io, cs(["sintonia", "escenario", "viol_malla", "viol_densa", "restriccion_peor", "J_malla", "J_densa",
+    println(io, cs(["sintonia", "modo", "escenario", "viol_malla", "viol_densa", "restriccion_peor", "J_malla", "J_densa",
                     "dfmax_malla", "dfmax_densa", "I2_pico_malla", "I2_pico_densa", "pb1_pico_malla", "pb1_pico_densa"]))
     foreach(l -> println(io, l), lin_den)
 end
@@ -86,12 +90,13 @@ Threads.@threads for idx in eachindex(pares_es)
                       y[end].pb1, y[end].pb2, maximum(r.th1 for r in y) / s.B, maximum(r.th2 for r in y) / s.B,
                       maximum(r.pred1 for r in y), maximum(r.pred2 for r in y), kl === nothing ? NaN : t[kl],
                       y[end].E1, y[end].E2, m30[im("E1_serv_MWs")], m30[im("E2_serv_MWs")],
-                      s.f0 - fm[kmin], t[kmin], seg])
+                      s.f0 - fm[kmin], t[kmin], seg,
+                      max(maximum(r.pred1 for r in y) / s.p0[1], maximum(r.pred2 for r in y) / s.p0[2])])
 end
 open(joinpath(dir, "largo_plazo.csv"), "w") do io
     println(io, cs(["sintonia", "escenario", "f_30", "f_Ts", "I1_Ts", "I2_Ts", "pb1_Ts", "pb2_Ts", "th1_frac", "th2_frac",
                     "pred1_max", "pred2_max", "t_limitador_s", "E1_Ts_real", "E2_Ts_real", "E1_extrapolada",
-                    "E2_extrapolada", "dfmax", "t_fmin", "df_segundo_descenso"]))
+                    "E2_extrapolada", "dfmax", "t_fmin", "df_segundo_descenso", "pred_max_sobre_p0"]))
     foreach(l -> println(io, l), lin_lp)
 end
 
@@ -122,19 +127,22 @@ escs_m = [s.nuevo_esc(d) for d in muestras]
 pares_fm = [(k, j) for k in 1:N for j in eachindex(sint)]
 lin_fm = Vector{String}(undef, length(pares_fm))
 i_pred1, i_pred2 = im("pred1_max"), im("pred2_max")
+cols_duro = findall(n -> n in ("I1_max", "I2_max", "df_max", "rocof", "V_banda") ||
+                       startswith(n, "ib") || startswith(n, "vbat") || startswith(n, "SOC"), NOMBRES_G)
 Threads.@threads for idx in eachindex(pares_fm)
     k, j = pares_fm[idx]
     d, e, x = muestras[k], escs_m[k], sint[j]
     θ = θ_de(x, e)
     m, g = evaluar(s, sin_limitador(e), θ)
-    ml, _ = evaluar(s, e, θ)
-    lin_fm[idx] = cs([x.nombre, d["nombre"], d["barra"], d["dP"], d["SOC0"]..., d["P_fv2"], m[1], m[2],
+    ml, gl = evaluar(s, merge(e, (lim=1.0,)), θ)
+    lin_fm[idx] = cs([x.nombre, x.modo, d["nombre"], d["barra"], d["dP"], d["SOC0"]..., d["P_fv2"], m[1], m[2],
                       max(0.0, maximum(g)), NOMBRES_G[argmax(g)], maximum(g) <= TOL, ml[1], ml[2],
-                      max(ml[i_pred1], ml[i_pred2])])
+                      max(ml[i_pred1], ml[i_pred2]), e.pb0[2], maximum(gl[cols_duro]) <= TOL,
+                      max(ml[i_pred1], ml[i_pred2]) > 0.01])
 end
 open(joinpath(dir, "fuera_muestra.csv"), "w") do io
-    println(io, cs(["sintonia", "muestra", "barra", "dP", "SOC1", "SOC2", "P_fv2", "J", "dfmax_Hz", "max_violacion",
-                    "restriccion_peor", "factible", "J_lim", "dfmax_lim", "pred_max"]))
+    println(io, cs(["sintonia", "modo", "muestra", "barra", "dP", "SOC1", "SOC2", "P_fv2", "J", "dfmax_Hz", "max_violacion",
+                    "restriccion_peor", "factible", "J_lim", "dfmax_lim", "pred_max", "pb0_2", "factible_duro", "activa_limitador"]))
     foreach(l -> println(io, l), lin_fm)
 end
 

@@ -4,7 +4,7 @@ Uso (desde Codigos_final/):  python python/ejecutar_experimentos.py <experimento
   conv --metodo F1|F2|F3|F4|F4b|F5 [--n 20]   convergencia desde los mismos puntos iniciales (S1, modo R)
   modos        restricciones (R) frente a limitador en la dinámica (L)
   ablacion     efecto de agregar cada grupo de restricciones sobre las del artículo base
-  pesos        sensibilidad a los pesos del objetivo y al estatismo de tensión (Kq fijo)
+  pareto       frontera de calidad de tensión y sensibilidad a pérdidas
   barridos     energía reservada (continuación + multiplicadores) y tamaño de la contingencia
   robusto      una sintonía para S1-S3: min-max, valor esperado, CVaR y regla afín
   malla        refinamiento de la malla de la colocación
@@ -61,13 +61,25 @@ def multiarranque(prob, ths, nombre=""):
 def activas(prob, z, s=0):
     """Nombres de las restricciones activas (|g| < 2e-3) de la sintonía z en el escenario s."""
     o = prob.orac
-    _, g = o.evaluar(prob.theta(z, s), prob.idx[s], prob.lim)
-    act = [o.nombres_g[k] for k in prob.cols if g[k] > -2e-3]
+    m, g = o.evaluar(prob.theta(z, s), prob.idx[s], prob.lim)
+    g = g.copy()
+    if prob.reserva is not None:
+        for nombre in ("E1_serv", "E2_serv"):
+            k = o.ig[nombre]
+            g[k] = (g[k] + 1) * p["bess"]["reserva"] / prob.reserva - 1
+    act = [o.nombres_g[k] for k in prob.cols if g[k] + prob.margen > -2e-3]
+    if prob.eps is not None and 1 - m["vdev"] / prob.eps[s] < 2e-3:
+        act.append("V")
+    if prob.zeta_min is not None and prob.zeta(z, s) / prob.zeta_min - 1 < 2e-3:
+        act.append("zeta")
     th = prob.theta(z, s)
     G, h = datos.restricciones_estaticas(p, c, [prob.escs[s]] if prob.xi is not None else prob.escs, prob.reserva)
-    act += [n for n, v in zip(datos.NOMBRES_EST, (h - G @ th) / np.abs(h)) if v < 2e-3]
+    filas_est = [i for nombre in prob.estaticas if nombre in fs.FILAS_EST for i in fs.FILAS_EST[nombre]]
+    holg = (h - G @ th) / np.maximum(np.abs(h), 1.0)
+    act += [datos.NOMBRES_EST[i] for i in filas_est if holg[i] < 2e-3]
     gt = datos.g_tension(th, ab, p, c)
-    act += [n for n, v in zip(["R9_lento1", "R9_lento2", "R9_rapido1", "R9_rapido2"], gt) if v > -2e-3]
+    act += [n for n, v in zip(["R9_lento1", "R9_lento2", "R9_rapido1", "R9_rapido2"], gt)
+            if "R9" in prob.estaticas and v > -2e-3]
     lb, ub = datos.limites(p)
     act += [f"{n}_min" for n, v, l in zip(TH, th, lb) if v - l < 1e-3 * (1 + abs(l))]
     act += [f"{n}_max" for n, v, u in zip(TH, th, ub) if u - v < 1e-3 * (1 + abs(u))]
@@ -76,6 +88,12 @@ def activas(prob, z, s=0):
 
 def fila_sintonia(prob, z, s=0, **extra):
     m, _ = prob.orac.evaluar(prob.theta(z, s), prob.idx[s], prob.lim)
+    if prob.eps is not None:
+        extra["eps"] = prob.eps[s]
+    else:
+        extra.setdefault("eps", np.inf)
+    if prob.zeta_min is not None:
+        extra["zeta_S1"] = prob.zeta(z, 0)
     return {**extra, **dict(zip(TH, prob.theta(z, s))), "J": prob.J_real(z), "viol": prob.viol(z),
             "dfmax_Hz": m["dfmax_Hz"], "fmin_Hz": m["fmin_Hz"], "vdev": m["vdev"], "perdidas": m["perdidas"],
             "pred1_max": m["pred1_max"], "pred2_max": m["pred2_max"], "alivio_carga": m["alivio_carga"],
@@ -173,38 +191,59 @@ def exp_ablacion():
              ("+ R4 límites del BESS", dict(grupos=("R2", "R6", "R3", "R4"), estaticas=(), p_max=True)),
              ("+ R5 energía de servicio", dict(grupos=("R2", "R6", "R3", "R4", "R5"), estaticas=(), p_max=True)),
              ("+ R7-R8 inercia", dict(grupos=("R2", "R6", "R3", "R4", "R5"), estaticas=("R7", "R8"), p_max=True)),
-             ("+ R9 control de tensión (P)", dict(grupos=("R2", "R6", "R3", "R4", "R5"), estaticas=("R7", "R8", "R9")))]
+             ("+ R9 control de tensión", dict(estaticas=("R7", "R8", "R9"), p_max=True)),
+             ("+ R11 validez fasorial", dict(p_max=True)),
+             ("(P): + ε de tensión, sin P ≤ Pmax", dict(eps_V=None))]
     filas = []
     with OraculoJulia(WORKERS) as orac:
         completo = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, modo="R")
+        _, sol_P = multiarranque(completo, ths, "(P) completo")
+        th_P, previa = completo.theta(sol_P["z"]), []
         for nombre, kw in casos:
-            pr = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, modo="R", **kw)
-            _, mejor = multiarranque(pr, ths, nombre)
+            pr = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, modo="R", **{"eps_V": np.inf, **kw})
+            _, mejor = multiarranque(pr, ths + previa + [th_P], nombre)
+            previa = [pr.theta(mejor["z"])]
             f = fila_sintonia(pr, mejor["z"], caso=nombre)
             f["viol_P"] = completo.viol(completo.z_de(pr.theta(mejor["z"])))     # violación del problema completo
             filas.append(f)
-    pd.DataFrame(filas).to_csv(R / "ablacion.csv", index=False)
+            pd.DataFrame(filas).to_csv(R / "ablacion.csv", index=False)
 
 
-# ============================================================ pesos del objetivo
-def exp_pesos():
-    import copy
+# ============================================================ frontera de Pareto
+def exp_pareto():
     ths = datos.puntos_iniciales(p, 20)[:args.n]
-    o, filas = p["optimizacion"], []
+    o, filas, previa = p["optimizacion"], [], []
+    P = form_directa.ProblemaDirecto(p, c, [esc[0]], modo="R")
     with OraculoJulia(WORKERS) as orac:
-        for wv, wl in [(0.0, 0.1), (0.1, 0.1), (1.0, 0.1), (10.0, 0.1), (100.0, 0.1), (1.0, 0.0), (1.0, 1.0)]:
-            pr = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, modo="R", pesos_J=(o["wf"], wv, wl))
-            _, mejor = multiarranque(pr, ths, f"wv={wv} wl={wl}")
-            filas.append(fila_sintonia(pr, mejor["z"], caso="pesos", wv=wv, wl=wl))
-            pd.DataFrame(filas).to_csv(R / "pesos.csv", index=False)
-        # Estatismo de tensión fijo e igual en ambos GFM: cuánto del resultado depende de que Kq baje a su cota
-        for kq in (10.0, 20.0, 30.0, 50.0):
-            p2 = copy.deepcopy(p)
-            p2["optimizacion"]["Kq_lim"] = [kq, kq + 1e-6]
-            pr = fs.ProblemaCN(orac, p2, c, [esc[0]], [0], ab, modo="R")
-            _, mejor = multiarranque(pr, [np.clip(t, *datos.limites(p2)) for t in ths], f"Kq={kq}")
-            filas.append(fila_sintonia(pr, mejor["z"], caso="Kq_fijo", wv=o["wv"], wl=o["wl"], Kq_fijo=kq))
-            pd.DataFrame(filas).to_csv(R / "pesos.csv", index=False)
+        for eps_V, wl in [(e, o["wl"]) for e in (0.6, 0.8, 1.0, 1.25, 1.5, 2.0, np.inf)] + [(1.0, 0.0), (1.0, 1.0)]:
+            pr = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, eps_V=eps_V, pesos_J=(o["wf"], 0, wl))
+            _, mejor = multiarranque(pr, ths + previa, f"ε={eps_V} wl={wl}")
+            # Sólo el objetivo cambia para los dos casos de wl; el barrido ε reutiliza un único NLP.
+            directo = P if wl == o["wl"] else form_directa.ProblemaDirecto(
+                p, c, [esc[0]], pesos_J=(o["wf"], 0, wl))
+            base = directo.resolver(pr.theta(mejor["z"]), eps_V=eps_V)
+            previa = [base["th"]]
+            f = fila_sintonia(pr, pr.z_de(base["th"]), eps_V=eps_V, wl=wl, lam_V=base["lam_V"],
+                              J_modelo=base["J"], estado=base["estado"], eps=base["eps"][0])
+            filas.append(f)
+            pd.DataFrame(filas).to_csv(R / "pareto.csv", index=False)
+            if eps_V == 1.0 and wl == o["wl"]:
+                laterales = []
+                for e in (0.98, 1.02):
+                    res = P.resolver(base["th"], eps_V=e)
+                    ref = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, eps_V=e)
+                    lat = fila_sintonia(ref, ref.z_de(res["th"]), eps_V=e, wl=wl, lam_V=res["lam_V"],
+                                        J_modelo=res["J"], estado=res["estado"])
+                    filas.append(lat)
+                    laterales.append(res)
+                    pd.DataFrame(filas).to_csv(R / "pareto.csv", index=False)
+                dif = ((laterales[1]["J"] - laterales[0]["J"]) / 0.04
+                       if all(res["exito"] for res in laterales) and base["exito"] else np.nan)
+                pred = -base["lam_V"] * P.vdev0[0]
+                f.update(dJ_deps_multiplicador=pred, dJ_deps_diferencias=dif,
+                         error_relativo=abs(pred - dif) / max(abs(dif), 1e-12),
+                         mismo_activo=len({f["activas"], filas[-2]["activas"], filas[-1]["activas"]}) == 1)
+                pd.DataFrame(filas).to_csv(R / "pareto.csv", index=False)
 
 
 # ============================================================ barridos
@@ -216,15 +255,20 @@ def exp_barridos():
     with OraculoJulia(WORKERS) as orac:
         # Energía reservada: multiarranque con SQP (más la solución del punto anterior, continuación) y luego
         # colocación desde esa solución, que entrega los multiplicadores. El multiplicador se contrasta con la
-        # pendiente por diferencias centradas (±5 %), resueltas con la colocación desde la misma solución.
+        # pendiente por diferencias centradas (±1 %), resueltas con la colocación desde la misma solución.
         previa = []
-        for rho in (0.03, 0.04, 0.05, 0.06, 0.08, 0.10, 0.15):
+        for rho in (0.04, 0.045, 0.05, 0.055, 0.06, 0.08, 0.10):
             pr = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, modo="R", reserva=rho)
             _, mejor = multiarranque(pr, ths + previa, f"reserva {rho}")
             base = P.resolver(pr.theta(mejor["z"]), reserva=rho)
             previa = [base["th"]]
-            Jc = [P.resolver(base["th"], reserva=rho * fr) for fr in (0.95, 1.05)]
-            ok = all(r["exito"] for r in Jc)
+            Jc = [P.resolver(base["th"], reserva=rho * fr) for fr in (0.99, 1.01)]
+            ok = base["exito"] and all(r["exito"] for r in Jc)
+            act = [activas(pr, pr.z_de(base["th"]))]
+            for fr, res in zip((0.99, 1.01), Jc):
+                ref = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, reserva=rho * fr)
+                act.append(activas(ref, ref.z_de(res["th"])))
+            dif = (Jc[1]["J"] - Jc[0]["J"]) / (0.02 * rho) if ok else np.nan
             # dJ*/dρ = -Σ_i λ_i dE_res,i/dρ, con λ de las filas de energía de servicio y de R8a
             dE = c["Eres"] / r0
             pred = -(base["lam_E0"] * dE[0] + base["lam_E1"] * dE[1]
@@ -232,7 +276,8 @@ def exp_barridos():
             filas.append(fila_sintonia(pr, pr.z_de(base["th"]), barrido="reserva", valor=rho, estado=base["estado"],
                                        J_modelo=base["J"], lam_E1=base["lam_E0"], lam_E2=base["lam_E1"],
                                        dJ_drho_multiplicador=pred,
-                                       dJ_drho_diferencias=(Jc[1]["J"] - Jc[0]["J"]) / (0.1 * rho) if ok else np.nan))
+                                       dJ_drho_diferencias=dif, mismo_activo=len(set(act)) == 1,
+                                       error_relativo=abs(pred - dif) / max(abs(dif), 1e-12)))
             log(f"reserva {rho}: J = {base['J']:.5f}, dJ/dρ multiplicador {pred:.4f}, diferencias "
                 f"{filas[-1]['dJ_drho_diferencias']:.4f}")
             pd.DataFrame(filas).to_csv(R / "barridos.csv", index=False)
@@ -260,40 +305,47 @@ def exp_robusto():
             pr = fs.ProblemaCN(orac, p, c, [e], [k], ab, modo="R")
             _, mejor = multiarranque(pr, ths, f"óptimo de {e['nombre']}")
             sem[k] = pr.theta(mejor["z"])
-            filas.append(fila_sintonia(pr, mejor["z"], sintonia=f"opt_{e['nombre']}", criterio="un escenario"))
-        semillas = [np.array([2.94, 2.00, 22.0, 20.0, 10.0, 10.0, 0.28, 0.28])] + ths[:2] + list(sem.values())
-        sem_afin = [np.concatenate([sem[1], sem[2] - sem[1]]), np.concatenate([sem[0], sem[2] - sem[0]])] + semillas[:4]
+            f = fila_sintonia(pr, mejor["z"], modo="R", sintonia=f"opt_{e['nombre']}", criterio="un escenario")
+            Js = []
+            for j in range(3):
+                ref = fs.ProblemaCN(orac, p, c, [esc[j]], [j], ab)
+                z = ref.z_de(sem[k])
+                Js.append(ref.J_real(z))
+                f.update({f"J_S{j+1}": Js[-1], f"viol_S{j+1}": ref.viol(z)})
+            f.update(J_max=max(Js), J_esp=float(np.dot(pi, Js)))
+            filas.append(f)
+            pd.DataFrame(filas).to_csv(R / "robusto.csv", index=False)
         casos = [("minmax", dict(agregacion="minmax")), ("esperado", dict(agregacion="esperado", pesos=pi)),
                  ("cvar80", dict(agregacion="cvar", pesos=pi, alpha=0.8)),
                  ("afin_minmax", dict(agregacion="minmax", xi=xi))]
-        for nombre, kw in casos:
-            pr = fs.ProblemaCN(orac, p, c, esc, [0, 1, 2], ab, modo="R", **kw)
-            _, mejor = multiarranque(pr, sem_afin if "xi" in kw else semillas, nombre)
-            z = mejor["z"]
-            Js = [pr.J_esc(z, s) for s in range(3)]
-            f = fila_sintonia(pr, z, sintonia=nombre, criterio=nombre, J_S1=Js[0], J_S2=Js[1], J_S3=Js[2],
-                              J_max=max(Js), J_esp=float(np.dot(pi, Js)))
-            if "xi" in kw:                                        # sintonía base y pendiente de la regla afín
-                d = np.asarray(z[8:16]) * (pr.ub - pr.lb)
-                f.update({f"d{n}": v for n, v in zip(TH, d)})
-                f["activas"] = " | ".join(activas(pr, z, s) for s in (0, 2))
-            filas.append(f)
-        if args.rapido:
-            pd.DataFrame(filas).to_csv(R / "robusto.csv", index=False)
-            return
-        # contraste con la colocación multiescenario (IPOPT) desde la solución min-max de caja negra
-        th_mm = next(f for f in filas if f["sintonia"] == "minmax")
-        P = form_directa.ProblemaDirecto(p, c, esc, "trapecio", modo="R", agregacion="minmax")
-        log(f"colocación min-max construida en {P.t_construccion:.0f} s ({P.nw} variables)")
-        r = P.resolver(np.array([th_mm[n] for n in TH]))
-        pr = fs.ProblemaCN(orac, p, c, esc, [0, 1, 2], ab, modo="R", agregacion="minmax")
-        z = pr.z_de(r["th"])
-        Js = [pr.J_esc(z, s) for s in range(3)]
-        filas.append(fila_sintonia(pr, z, sintonia="minmax_F4", criterio="minmax", J_S1=Js[0], J_S2=Js[1],
-                                   J_S3=Js[2], J_max=max(Js), J_esp=float(np.dot(pi, Js)), estado=r["estado"],
-                                   t_s=r["t_s"], t_construccion_s=r["t_construccion_s"], J_modelo=r["J"]))
-        log(f"colocación min-max: {r['estado']} J = {r['J']:.5f} en {r['t_s']:.0f} s")
-    pd.DataFrame(filas).to_csv(R / "robusto.csv", index=False)
+        for modo in ("R", "L"):
+            previa = []
+            for nombre, kw in casos:
+                if modo == "L" and "xi" in kw:
+                    continue
+                pr = fs.ProblemaCN(orac, p, c, esc, [0, 1, 2], ab, modo=modo,
+                                   margen=0.005, zeta_min=0.05, **kw)
+                semillas = ths[:2] + list(sem.values()) + previa
+                if "xi" in kw:
+                    semillas += [np.concatenate([sem[k], sem[2] - sem[k]]) for k in (0, 1)]
+                corr, mejor = multiarranque(pr, semillas, f"{nombre} {modo}")
+                z = mejor["z"]
+                previa = [pr.theta(z)]
+                Js = [pr.J_esc(z, s) for s in range(3)]
+                f = fila_sintonia(pr, z, modo=modo, sintonia=nombre, criterio=nombre,
+                                  J_S1=Js[0], J_S2=Js[1], J_S3=Js[2], J_max=max(Js), J_esp=float(np.dot(pi, Js)),
+                                  viol_min_corridas=min(f["viol"] for f in corr))
+                for k in range(3):
+                    ref = fs.ProblemaCN(orac, p, c, [esc[k]], [k], ab, modo=modo, margen=0.005, zeta_min=0.05)
+                    f[f"viol_S{k+1}"] = ref.viol(ref.z_de(pr.theta(z, k)))
+                if "xi" in kw:
+                    d = np.asarray(z[8:16]) * (pr.ub - pr.lb)
+                    f.update({f"d{n}": v for n, v in zip(TH, d)})
+                    f["activas"] = " | ".join(activas(pr, z, s) for s in range(3))
+                filas.append(f)
+                pd.DataFrame(filas).to_csv(R / "robusto.csv", index=False)
+                if args.rapido:
+                    return
 
 
 # ============================================================ refinamiento de malla
@@ -324,18 +376,19 @@ def exp_malla():
 
 # ============================================================ sintonías finales
 def exp_optimos():
-    filas = [{"sintonia": "inicial", "escenario": esc[0]["nombre"],
+    filas = [{"sintonia": "inicial", "modo": "R", "escenario": esc[0]["nombre"],
               **dict(zip(TH, p["optimizacion"]["theta_inicial"]))}]
     f1 = pd.read_csv(R / "corridas_F1.csv").sort_values("J_real").iloc[0]
-    filas.append({"sintonia": "F1_articulo", "escenario": esc[0]["nombre"], **{n: f1[n] for n in TH}})
+    filas.append({"sintonia": "F1_articulo", "modo": "R", "escenario": esc[0]["nombre"], **{n: f1[n] for n in TH}})
     mod = pd.read_csv(R / "modos.csv")
     for modo, nombre in (("R", "opt_R"), ("L", "opt_L")):
-        f = mod[(mod.modo == modo) & (mod.metodo == "F4")].iloc[0]
-        filas.append({"sintonia": nombre, "escenario": esc[0]["nombre"], **{n: f[n] for n in TH}})
+        f = mod[(mod.modo == modo) & mod.metodo.isin(["F2", "F4"]) &
+                (mod.viol <= TOL_FACT)].sort_values("J").iloc[0]
+        filas.append({"sintonia": nombre, "modo": modo, "escenario": esc[0]["nombre"], **{n: f[n] for n in TH}})
     rob = pd.read_csv(R / "robusto.csv")
-    for s in ("minmax", "esperado", "cvar80", "afin_minmax"):
-        f = rob[rob.sintonia == s].iloc[0]
-        filas.append({"sintonia": s, "escenario": esc[0]["nombre"], **{n: f[n] for n in TH},
+    for s, modo in [(s, "R") for s in ("minmax", "esperado", "cvar80", "afin_minmax")] + [("minmax_L", "L")]:
+        f = rob[(rob.sintonia == ("minmax" if s == "minmax_L" else s)) & (rob.modo == modo)].iloc[0]
+        filas.append({"sintonia": s, "modo": modo, "escenario": esc[0]["nombre"], **{n: f[n] for n in TH},
                       **({f"d{n}": f[f"d{n}"] for n in TH} if s == "afin_minmax" else {})})
     df = pd.DataFrame(filas)
     for n in TH:
@@ -349,12 +402,12 @@ def exp_optimos():
 def _cert_uno(tarea):
     from gfm import certificado
     c_loc, esc_loc, th_names, r = tarea
-    As, fila = [], {"sintonia": r["sintonia"]}
+    As, fila = [], {"sintonia": r["sintonia"], "modo": r["modo"]}
     th_base = np.array([r[n] for n in th_names], float)
     dth = np.array([r[f"d{n}"] for n in th_names], float)
     for k, e in enumerate(esc_loc):
         th = th_base + (0.0 if k < 2 else 1.0) * dth
-        A, resid = certificado.linealizar(c_loc, {**e, "lim": 0.0}, th)
+        A, resid = certificado.linealizar(c_loc, {**e, "lim": float(r["modo"] == "L")}, th)
         ev = np.linalg.eigvals(A)
         osc = ev[np.abs(ev.imag) > 1e-6]
         fila[f"zeta_{e['nombre']}"] = float((-osc.real / np.abs(osc)).min()) if len(osc) else 1.0
@@ -364,6 +417,7 @@ def _cert_uno(tarea):
     fila["zeta_min"] = min(fila[f"zeta_{e['nombre']}"] for e in esc_loc)
     fila["alpha_eig_min"] = min(fila[f"alpha_{e['nombre']}"] for e in esc_loc)
     fila["alpha_LMI_comun"] = certificado.tasa_certificada_comun(As)
+    fila["lmi_comun_existe"] = bool(np.isfinite(fila["alpha_LMI_comun"]))
     fila["zeta_LMI_S1"] = certificado.amortiguamiento_certificado(As[0])
     return fila
 
@@ -385,7 +439,7 @@ def main():
     ap.add_argument("exp")
     ap.add_argument("--metodo", default="F2")
     ap.add_argument("--n", type=int, default=20)
-    ap.add_argument("--rapido", action="store_true", help="omite las partes con IPOPT (prueba del script)")
+    ap.add_argument("--rapido", action="store_true", help="en robusto termina tras el primer caso multiescenario R")
     ap.add_argument("--res", default=None, help="carpeta de resultados (por defecto resultados/)")
     ap.add_argument("--workers", type=int, default=int(os.environ.get("GFM_WORKERS", "0")),
                     help="procesos de Julia en paralelo (0 = mitad de hilos de CPU)")
@@ -395,7 +449,7 @@ def main():
     R = datos.RESULTADOS if args.res is None else Path(args.res)
     R.mkdir(exist_ok=True, parents=True)
     ab = modelo.sensibilidad_tension(c, esc[0])
-    {"conv": exp_conv, "modos": exp_modos, "ablacion": exp_ablacion, "pesos": exp_pesos, "barridos": exp_barridos,
+    {"conv": exp_conv, "modos": exp_modos, "ablacion": exp_ablacion, "pareto": exp_pareto, "barridos": exp_barridos,
      "robusto": exp_robusto, "malla": exp_malla, "optimos": exp_optimos, "cert": exp_cert}[args.exp]()
     log(f"Listo: {args.exp}")
 

@@ -8,7 +8,7 @@ import numpy as np
 RAIZ = Path(__file__).resolve().parents[2]          # carpeta Codigos_final/
 RESULTADOS = RAIZ / "resultados"
 NOMBRES_THETA = ["H1", "H2", "D1", "D2", "Kq1", "Kq2", "K1", "K2"]
-NOMBRES_EST = ["R7", "R8a_1", "R8a_2", "R8b_1", "R8b_2"]
+NOMBRES_EST = ["R7", "R8a_1", "R8a_2", "R8b_1", "R8b_2", "R11_1", "R11_2"]
 
 
 def _leer(ruta):
@@ -60,21 +60,24 @@ def holgura_potencia(p, c, escs):
 
 
 def restricciones_estaticas(p, c, escs, reserva=None):
-    """Restricciones lineales G·θ ≤ h sobre la inercia virtual:
+    """Restricciones lineales G·θ ≤ h sobre inercia y separación de escalas:
     R7   inercia mínima del sistema para la contingencia de diseño: Hg·Sg + Σ Hi·Si ≥ f0·ΔP/(2·RoCoF_max)
     R8a  energía de la respuesta inercial respaldada por la reserva: 2·Hi·Si·Δf_max/f0 ≤ E_res,i  (Hu et al.)
     R8b  inercia efectiva (AT-IBR Art. 7-6 k): la potencia inercial a RoCoF = 2 Hz/s cabe en la holgura,
          2·Hi·Si·RoCoF_max/f0 ≤ ΔP_disp,i
+    R11  validez fasorial: 2·Hi/Di ≥ n_sep·max(τ_q)
     """
     n, S, f0 = p["norma"], c["S"], c["f0"]
     Eres = c["Eres"] * (1.0 if reserva is None else reserva / p["bess"]["reserva"])
     req = f0 * n["dP_diseno"] / (2 * n["rocof_max"]) - c["Hg"] * c["Sg"]
-    G = np.zeros((5, 8))
+    G = np.zeros((7, 8))
     G[0, :2] = -S
     for i in range(2):
         G[1 + i, i] = 2 * S[i] * (f0 - n["f_min_perm"]) / f0
         G[3 + i, i] = 2 * S[i] * n["rocof_max"] / f0
-    h = np.concatenate([[-req], Eres, holgura_potencia(p, c, escs)])
+        G[5 + i, i] = -2
+        G[5 + i, 2 + i] = p["gfm"]["n_sep"] * max(c["tau_q"])
+    h = np.concatenate([[-req], Eres, holgura_potencia(p, c, escs), [0.0, 0.0]])
     return G, h
 
 

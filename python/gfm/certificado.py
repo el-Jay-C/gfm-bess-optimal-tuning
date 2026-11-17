@@ -123,16 +123,35 @@ def lmi_comun_factible(As, alpha):
     return _resolver(cp.Problem(cp.Minimize(0), res))
 
 
+def inexistencia_lmi_comun(As):
+    """Alternativa dual: Xs ⪰ 0 y Σ(As Xs + Xs Asᵀ) ≻ 0 excluyen cualquier P ≻ 0 común.
+    La traza fija la escala; se verifican los residuos antes de aceptar la prueba numérica."""
+    from scipy.linalg import matrix_balance
+    _, T = matrix_balance(As[0], permute=False)
+    Ae = [np.linalg.solve(T, A @ T) for A in As]
+    n = len(T)
+    Xs = [cp.Variable((n, n), symmetric=True) for _ in Ae]
+    t = cp.Variable()
+    M = sum(A @ X + X @ A.T for A, X in zip(Ae, Xs))
+    pr = cp.Problem(cp.Maximize(t), [X >> 0 for X in Xs] +
+                    [sum(cp.trace(X) for X in Xs) == 1, M >> t * np.eye(n)])
+    pr.solve(solver=cp.CLARABEL, tol_feas=1e-10, tol_gap_abs=1e-10, tol_gap_rel=1e-10, max_iter=500)
+    return (pr.status in (cp.OPTIMAL, cp.OPTIMAL_INACCURATE) and
+            min(np.linalg.eigvalsh(X.value).min() for X in Xs) >= -1e-9 and
+            np.linalg.eigvalsh(M.value).min() > 1e-8)
+
+
 def tasa_certificada_comun(As, tol=1e-3):
     """Mayor α con una única P ≻ 0 tal que AₛᵀP + PAₛ + 2αP ⪯ 0 para todas las matrices Aₛ (bisección).
     Es una función de Lyapunov cuadrática común: certifica la tasa α para cada escenario y para cualquier
     combinación convexa de ellos (incertidumbre politópica), algo que los autovalores por separado no entregan.
-    Devuelve -inf si no existe."""
+    Devuelve NaN si la alternativa dual confirma que no existe P común para α ≥ 0."""
     A0 = As[0]
     s = np.sqrt(np.maximum(np.linalg.norm(A0, axis=1) * np.linalg.norm(A0, axis=0), 1e-12)) ** -0.5
     Ae = [np.diag(1 / s) @ A @ np.diag(s) for A in As]            # misma similaridad para todas
     if not lmi_comun_factible(Ae, 0.0):
-        return -np.inf
+        assert inexistencia_lmi_comun(As), "Fallo numérico del SDP común: sin certificado dual de inexistencia"
+        return np.nan
     lo, hi = 0.0, min(-np.max(np.linalg.eigvals(A).real) for A in As)
     while hi - lo > tol * max(1.0, lo):
         mid = (lo + hi) / 2

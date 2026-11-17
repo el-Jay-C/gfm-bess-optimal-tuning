@@ -23,20 +23,30 @@ GRUPOS = {"R2": ["df_max", "rocof"],
           "R5": ["E1_serv", "E2_serv"],
           "R6": ["V_banda"]}
 SOSTENIDAS = {"th1", "th2", "I1_fin", "I2_fin", "pb1_max", "pb2_max"}     # en modo L las maneja el limitador
-FILAS_EST = {"R7": [0], "R8": [1, 2, 3, 4]}
+FILAS_EST = {"R7": [0], "R8": [1, 2, 3, 4], "R11": [5, 6]}
 
 
 class ProblemaCN:
     def __init__(self, orac, p, c, escs, idx, ab, modo="R", grupos=("R2", "R3", "R4", "R5", "R6"),
-                 estaticas=("R7", "R8", "R9"), pesos_J=None, agregacion=None, pesos=None, alpha=0.8, xi=None,
-                 reserva=None, p_max=False):
+                 estaticas=("R7", "R8", "R9", "R11"), pesos_J=None, agregacion=None, pesos=None, alpha=0.8, xi=None,
+                 reserva=None, p_max=False, eps_V=None, zeta_min=None, margen=0.0):
         """escs: datos de los escenarios (para las restricciones estáticas); idx: sus índices en el oráculo.
         xi: valor de la condición observable de cada escenario (activa la regla afín).
         reserva: fracción de energía reservada (por defecto la del archivo de parámetros).
-        p_max: agrega la única restricción del artículo base, P ≤ Pmax del inversor."""
+        p_max: agrega la única restricción del artículo base, P ≤ Pmax del inversor.
+        eps_V: cota relativa a θ0 por escenario y modo; infinito la desactiva.
+        zeta_min: amortiguamiento oscilatorio mínimo (sólo escenarios de diseño).
+        margen: exige g_oráculo ≤ -margen en las restricciones de trayectoria seleccionadas."""
         o = p["optimizacion"]
         self.orac, self.p, self.c, self.escs, self.idx, self.ab = orac, p, c, escs, list(idx), ab
         self.lim = 1 if modo == "L" else 0
+        self.eps_V = o["eps_V"] if eps_V is None else eps_V
+        self.eps = (self.eps_V * np.array([orac.evaluar(o["theta_inicial"], k, self.lim)[0]["vdev"]
+                                         for k in self.idx]) if np.isfinite(self.eps_V) else None)
+        self.zeta_min, self.margen = zeta_min, margen
+        if zeta_min is not None:
+            assert set(self.idx) <= {0, 1, 2}, "ζ sólo admite escenarios de diseño de datos.cargar()"
+        self.cache_zeta = {}
         nombres = [n for gname in grupos for n in GRUPOS[gname] if not (modo == "L" and n in SOSTENIDAS)]
         self.cols = [orac.ig[n] for n in nombres]
         self.reserva, self.p_max = reserva, p_max
@@ -97,6 +107,17 @@ class ProblemaCN:
         eta = min(Js, key=lambda e: e + self.pesos @ np.maximum(Js - e, 0) / (1 - self.alpha))
         return eta + self.pesos @ np.maximum(Js - eta, 0) / (1 - self.alpha)
 
+    def zeta(self, z, s=0):
+        from .certificado import linealizar
+        th = self.theta(z, s)
+        clave = (s, *th)
+        if clave not in self.cache_zeta:
+            A, _ = linealizar(self.c, {**self.escs[s], "lim": self.lim}, th)
+            ev = np.linalg.eigvals(A)
+            osc = ev[np.abs(ev.imag) > 1e-6]
+            self.cache_zeta[clave] = float(np.min(-osc.real / np.abs(osc))) if len(osc) else 1.0
+        return self.cache_zeta[clave]
+
     def g(self, z):
         """Todas las restricciones como g(z) ≥ 0 (convención de SLSQP), normalizadas."""
         partes = []
@@ -106,7 +127,11 @@ class ProblemaCN:
             gs = gs[self.cols].copy()
             if self.reserva is not None:                    # g = E_serv/E_res - 1 con otra reserva
                 gs[self.esc_E] = (gs[self.esc_E] + 1) * r0 / self.reserva - 1
-            partes.append(-gs)
+            partes.append(-gs - self.margen)
+            if self.eps is not None:
+                partes.append(np.array([1 - m["vdev"] / self.eps[s]]))
+            if self.zeta_min is not None:
+                partes.append(np.array([(self.zeta(z, s) - self.zeta_min) / self.zeta_min]))
             if self.p_max:
                 partes.append(1.0 - np.array([m["p1_max"], m["p2_max"]]))
         distintas = range(len(self.idx)) if self.xi is not None else [0]
@@ -116,7 +141,7 @@ class ProblemaCN:
                                            self.reserva)
             for nombre, filas in FILAS_EST.items():
                 if nombre in self.estaticas:
-                    partes.append((h[filas] - G[filas] @ th) / np.abs(h[filas]))
+                    partes.append((h[filas] - G[filas] @ th) / np.maximum(np.abs(h[filas]), 1.0))
             if "R9" in self.estaticas:
                 partes.append(-g_tension(th, self.ab, self.p, self.c) / 2.2)
             if self.xi is not None:
