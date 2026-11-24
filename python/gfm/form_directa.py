@@ -161,7 +161,7 @@ class ProblemaDirecto:
                 else:
                     agregar(pb, -1.0, np.inf)
             Vsq = O[[IDX[f"V{k}sq"] for k in range(1, 6)], :]
-            agregar(Vsq, n["V_min_alerta"] ** 2, n["V_max_alerta"] ** 2)
+            agregar(Vsq, n["V_min_normal"] ** 2, n["V_max_normal"] ** 2)
 
             dV = (ca.sqrt(Vsq) - ca.repmat(ca.DM(c["Vpre"]), 1, N + 1)) / o["dV_ref"]
             vdev = ca.mtimes(ca.sum1(dV ** 2), wtrap) / (5 * T)

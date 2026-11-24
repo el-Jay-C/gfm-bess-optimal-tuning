@@ -8,11 +8,12 @@ mat(A) = [collect(r) for r in eachrow(A)]
 cte = Dict(string(k) => getfield(s, k) for k in
            (:f0, :wb, :Sb, :Sg, :Hg, :Dg, :Rg, :TG, :TR, :FH, :Eg, :pm0, :S, :Xf, :tau_q, :Rconv,
             :p0, :q0, :U0, :i0, :Pn, :Eh, :ocv0, :ocv1, :R0, :R1, :tau1, :eta, :Eres, :Imax, :Icont, :B,
-            :klim, :tau_lib, :eps_i, :eps_th, :mth, :ath, :ploss0))
+            :klim, :kp_lim, :tau_lib, :eps_i, :eps_th, :mth, :ath, :ploss0))
 cte["Vpre"] = abs.(s.V)
 esc = [Dict("nombre" => e.nombre, "dP" => e.dP, "x0" => e.x0, "GL" => e.GL, "pfv" => e.pfv, "pb0" => e.pb0,
             "Yred_re" => mat(real(e.Yred)), "Yred_im" => mat(imag(e.Yred)),
-            "W_re" => mat(real(e.W)), "W_im" => mat(imag(e.W))) for e in s.esc]
+            "W_re" => mat(real(e.W)), "W_im" => mat(imag(e.W)), "Z_re" => mat(real(e.Z)), "Z_im" => mat(imag(e.Z)),
+            "Sc_re" => real(e.Sc), "Sc_im" => imag(e.Sc)) for e in s.esc]
 ruta = joinpath(RAIZ, "datos", "red_exportada.toml")
 open(ruta, "w") do io
     TOML.print(io, Dict("constantes" => cte, "escenario" => esc))

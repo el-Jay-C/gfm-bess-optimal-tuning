@@ -28,7 +28,9 @@ def cargar():
         esc.append({"nombre": e["nombre"], "dP": e["dP"], "x0": np.asarray(e["x0"]),
                     "GL": np.asarray(e["GL"]), "pfv": np.asarray(e["pfv"]), "pb0": np.asarray(e["pb0"]),
                     "Y": np.asarray(e["Yred_re"]) + 1j * np.asarray(e["Yred_im"]),
-                    "W": np.asarray(e["W_re"]) + 1j * np.asarray(e["W_im"]), "lim": 1.0})
+                    "W": np.asarray(e["W_re"]) + 1j * np.asarray(e["W_im"]),
+                    "Z": np.asarray(e["Z_re"]) + 1j * np.asarray(e["Z_im"]),
+                    "Sc": np.asarray(e["Sc_re"]) + 1j * np.asarray(e["Sc_im"]), "lim": 1.0})
     return p, c, esc
 
 

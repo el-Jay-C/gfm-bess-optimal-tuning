@@ -36,5 +36,5 @@ function kron(Ybus, yL, barras, X)
     end
     Yii = Diagonal([1 / (im * X[k]) for k in 1:ng])
     W = -(Ybb \ transpose(Yib))
-    return Matrix(Yii + Yib * W), W
+    return Matrix(Yii + Yib * W), W, inv(Ybb)                # inv(Ybb): tensión por inyección de corriente en barras
 end

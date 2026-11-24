@@ -22,11 +22,12 @@ rng = MersenneTwister(2026)
 θs = [Float64.(o["theta_inicial"]), [lb .+ rand(rng, 8) .* (ub .- lb) for _ in 1:50]...]
 peor = 0.0
 for e in s.esc
-    @assert norm(e.Yred_pre * s.E0 - s.Ifu) < 1e-9 "Kron no reproduce las corrientes del flujo"
-    @assert norm(e.W_pre * s.E0 - s.V) < 1e-9 "Kron no reproduce las tensiones del flujo"
+    Iiny = -conj.(e.Sc_pre ./ s.V)
+    @assert norm(e.Yred_pre * s.E0 - transpose(e.W_pre) * Iiny - s.Ifu) < 1e-9 "Kron no reproduce las corrientes del flujo"
+    @assert norm(e.W_pre * s.E0 + e.Z_pre * Iiny - s.V) < 1e-9 "Kron no reproduce las tensiones del flujo"
     for θ in θs
         dx = zeros(NX)
-        rhs!(dx, e.x0, (s, merge(e, (Yred=e.Yred_pre, W=e.W_pre)), θ), 0.0)
+        rhs!(dx, e.x0, (s, merge(e, (Yred=e.Yred_pre, W=e.W_pre, Z=e.Z_pre, Sc=e.Sc_pre)), θ), 0.0)
         dx[[igfm(i) + 5 for i in 1:2]] .= 0
         global peor = max(peor, maximum(abs, dx))
     end

@@ -3,7 +3,7 @@
 # Restricciones g ≤ 0, todas normalizadas por su límite (violación relativa).
 const NOMBRES_G = ["I1_max", "I2_max", "th1", "th2", "I1_fin", "I2_fin", "ib1_max", "ib2_max",
                    "vbat1_min", "vbat2_min", "pb1_max", "pb2_max", "df_max", "rocof",
-                   "V_banda", "E1_serv", "E2_serv", "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max"]
+                   "V_banda", "E1_serv", "E2_serv", "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max", "pb1_sost", "pb2_sost"]
 const NOMBRES_M = ["J", "dfmax_Hz", "fmin_Hz", "t_fmin_s", "vdev", "perdidas", "vdev_paper", "p1_max", "p2_max",
                    "rocof_Hz_s", "V_min", "V_max", "I1_pico", "I2_pico", "I1_fin", "I2_fin", "th1_frac", "th2_frac",
                    "E1_serv_MWs", "E2_serv_MWs", "pred1_max", "pred2_max", "f_fin_Hz",
@@ -32,15 +32,17 @@ function salidas(s, e, t, X)
     map(eachindex(t)) do k
         x = X[:, k]
         a = algebra(x, s, e)
-        Vb = abs.(e.W * a.E)
-        ploss = sum(real, a.Sint) - sum(e.GL .* Vb .^ 2)
+        Vb = abs.(a.V)
+        pcarga = sum(e.GL .* Vb .^ 2) + sum(real, e.Sc)
+        ploss = sum(real, a.Sint) - pcarga
         (t=t[k], f_sg=f0 * x[2], f1=f0 * x[igfm(1)+2], f2=f0 * x[igfm(2)+2],
          I1=a.g[1].iac, I2=a.g[2].iac, p1=a.g[1].p, p2=a.g[2].p, q1=a.g[1].q, q2=a.g[2].q,
          U1=a.g[1].U, U2=a.g[2].U, pb1=a.g[1].pb, pb2=a.g[2].pb, ib1=a.g[1].ib, ib2=a.g[2].ib,
          vbat1=a.g[1].vbat, vbat2=a.g[2].vbat, SOC1=x[igfm(1)+5], SOC2=x[igfm(2)+5],
          E1=x[igfm(1)+7], E2=x[igfm(2)+7], th1=x[igfm(1)+8], th2=x[igfm(2)+8],
-         pred1=x[igfm(1)+9], pred2=x[igfm(2)+9], ilim1=a.g[1].ilim, ilim2=a.g[2].ilim,
-         pg=a.pg, ploss=ploss, pcarga=sum(e.GL .* Vb .^ 2), V1=Vb[1], V2=Vb[2], V3=Vb[3], V4=Vb[4], V5=Vb[5])
+         pred1=x[igfm(1)+9] + s.kp_lim * exceso_lim(a.g[1], s, 1),
+         pred2=x[igfm(2)+9] + s.kp_lim * exceso_lim(a.g[2], s, 2), ilim1=a.g[1].ilim, ilim2=a.g[2].ilim,
+         pg=a.pg, ploss=ploss, pcarga=pcarga, V1=Vb[1], V2=Vb[2], V3=Vb[3], V4=Vb[4], V5=Vb[5])
     end
 end
 
@@ -77,10 +79,11 @@ function metricas(s, e, t, X)
          1 - minimum(col(:vbat1)) / b["v_min"], 1 - minimum(col(:vbat2)) / b["v_min"],
          maximum(abs, col(:pb1)) - 1, maximum(abs, col(:pb2)) - 1,
          dfmax / (s.f0 - n["f_min_perm"]) - 1, rocof / n["rocof_max"] - 1,
-         maximum(abs.(Vb .- 1)) / (n["V_max_alerta"] - 1) - 1,
+         maximum(abs.(Vb .- 1)) / (n["V_max_normal"] - 1) - 1,
          Eserv[1] / s.Eres[1] - 1, Eserv[2] / s.Eres[2] - 1,
          b["SOC_min"] - minimum(col(:SOC1)), b["SOC_min"] - minimum(col(:SOC2)),
-         maximum(col(:SOC1)) - b["SOC_max"], maximum(col(:SOC2)) - b["SOC_max"]]
+         maximum(col(:SOC1)) - b["SOC_max"], maximum(col(:SOC2)) - b["SOC_max"],
+         col(:pb1)[end] - 1, col(:pb2)[end] - 1]
     fmin, kmin = findmin(vec(minimum(F, dims=2)))
     m = [J, dfmax, fmin, t[kmin], vdev, perd, vpap, maximum(col(:p1)), maximum(col(:p2)), rocof,
          minimum(Vb), maximum(Vb), maximum(I1), maximum(I2), I1[end], I2[end],

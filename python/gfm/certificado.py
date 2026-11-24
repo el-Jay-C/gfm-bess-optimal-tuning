@@ -19,11 +19,12 @@ import numpy as np
 
 from .modelo import NX, construir, igfm, simular
 
-AC = [1, 2, 3] + [igfm(i) + k for i in range(2) for k in (0, 1, 2, 3)]   # ωg, xg, xr, δi, ωi, Ei, qmi
+AC_RED = [1, 2, 3] + [igfm(i) + k for i in range(2) for k in (0, 1, 2, 3)]   # ωg, xg, xr, δi, ωi, Ei, qmi
 
 
 def linealizar(c, e, th, T_eq=60.0):
     """Matriz A del subsistema AC en el equilibrio post-perturbación (ángulos relativos a δg)."""
+    AC = AC_RED + ([igfm(i) + 8 for i in range(2)] if e["lim"] else [])      # en L el limitador queda en el lazo
     f, _ = construir(c, e)
     X = simular(f, e["x0"], th, np.arange(0.0, T_eq + 0.05, 0.1))    # punto de partida cercano al equilibrio
     xb = X[:, -1].copy()

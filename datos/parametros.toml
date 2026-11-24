@@ -23,6 +23,7 @@ lineas = [
 # Consumos por barra (MW, Mvar) del sistema de Stagg y El-Abiad, modelados como impedancia constante.
 carga_P = [0.0, 20.0, 45.0, 40.0, 60.0]
 carga_Q = [0.0, 10.0, 15.0, 5.0, 10.0]
+frac_P = 0.0               # fracción de la carga (y del escalón) a potencia constante; el resto, impedancia constante
 V_slack = 1.04     # pu, barra 1 (máquina síncrona). Consignas escalonadas (1,04 / 1,025 / 1,015) para que la
                    # potencia reactiva se reparta entre las tres fuentes sin circulación entre ellas.
 
@@ -58,6 +59,7 @@ t_sobrecorriente = 5.0     # s, duración de I_max que fija el presupuesto térm
 # el límite vigente (I_max con presupuesto térmico disponible, I_cont al agotarse) o el BESS supere su potencia
 # nominal. La corriente del banco admite i_max [bess] de forma transitoria.
 k_lim = 2.0                # 1/s, ganancia integral del limitador (pu de potencia por pu de corriente y segundo)
+kp_lim = 0.5               # pu, ganancia proporcional del limitador (Du et al. 2019; kp = kpp·D/ωb, kpp ≈ 3 rad/s)
 tau_lib = 2.0              # s, liberación de la reducción de consigna cuando la corriente vuelve bajo el límite
 eps_i = 0.01               # pu, ancho de suavizado de la corriente
 eps_th = 0.005             # pu², ancho de suavizado del integrando térmico
@@ -108,7 +110,8 @@ theta_inicial = [3.0, 3.0, 25.0, 25.0, 20.0, 20.0, 1.0, 1.0]   # [H1 H2 D1 D2 Kq
 # Objetivo J = wf*dfmax/df_ref + wl*perdidas; calidad de tensión mediante ε-restricción
 wf = 1.0
 wv = 0.0
-eps_V = 1.0               # cota de la desviación de tensión: eps_V veces la de θ0 en el mismo escenario
+eps_V = inf               # ε-restricción de v3 (inactiva desde v4; la reemplaza la banda por barra)
+zeta_min = 0.10           # amortiguamiento mínimo de diseño (NTSyCS Art. 5-44, por analogía), en R y en L
 wl = 0.1
 df_ref = 1.0               # Hz
 dV_ref = 0.05              # pu

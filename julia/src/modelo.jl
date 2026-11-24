@@ -13,6 +13,7 @@
 
 const NG = 9                     # estados por GFM
 const NX = 4 + 2NG
+const N_PF = 12                  # iteraciones de punto fijo de la carga a potencia constante (igual en CasADi)
 igfm(i) = 4 + NG * (i - 1)
 
 "Absoluto suave (para la eficiencia de carga, idéntico en Julia y CasADi)."
@@ -51,14 +52,17 @@ function construir_sistema(p)
     pac = real.(Sgen[gf["barra"]]) .* Sb ./ gf["S"]
     iac = abs.(Ifu[2:3]) .* Sb ./ gf["S"]
     Rt = bs["R0"] + bs["R1"]
-    yL0 = (PL - im * QL) ./ abs2.(V)
-    Yred_pre, W_pre = kron(Y, yL0, barras, X)
+    frac = red["frac_P"]                                    # fracción a potencia constante
+    yL0 = (1 - frac) .* (PL - im * QL) ./ abs2.(V)
+    Sc0 = frac .* (PL + im * QL)
+    Yred_pre, W_pre, Z_pre = kron(Y, yL0, barras, X)
 
     "Escenario: escalón de carga dP [MW] en `barra`, SOC inicial y FV disponible en el GFM2 [MW]."
     function nuevo_esc(e)
-        yL = copy(yL0)
-        yL[e["barra"]] += e["dP"] / Sb / abs2(V[e["barra"]])
-        Yred, W = kron(Y, yL, barras, X)
+        yL, Sc = copy(yL0), copy(Sc0)
+        yL[e["barra"]] += (1 - frac) * e["dP"] / Sb / abs2(V[e["barra"]])
+        Sc[e["barra"]] += frac * e["dP"] / Sb
+        Yred, W, Z = kron(Y, yL, barras, X)
         pfv = [gf["P_fv"][1], get(e, "P_fv2", gf["P_fv"][2])] ./ gf["S"]
         pb0 = (pac + gf["R_conv"] .* iac .^ 2 - pfv) .* gf["S"] ./ bs["P_nom"]     # punto de operación del BESS
         x0 = zeros(NX)
@@ -72,7 +76,7 @@ function construir_sistema(p)
                            soc, bs["R1"] * ib, 0.0]
         end
         (nombre=e["nombre"], Yred=Yred, W=W, GL=real.(yL), x0=x0, pfv=pfv, pb0=pb0,
-         Yred_pre=Yred_pre, W_pre=W_pre, dP=e["dP"] / Sb, lim=1.0)
+         Z=Z, Sc=Sc, V0=V, Yred_pre=Yred_pre, W_pre=W_pre, Z_pre=Z_pre, Sc_pre=Sc0, dP=e["dP"] / Sb, lim=1.0)
     end
     esc = map(nuevo_esc, p["escenario"])
 
@@ -85,7 +89,7 @@ function construir_sistema(p)
             p0=pac, q0=[esc[1].x0[igfm(i)+4] for i in 1:2], U0=abs.(V[gf["barra"]]), i0=iac,
             Pn=Float64.(bs["P_nom"]), Eh=Float64.(bs["E_h"]), ocv0=bs["ocv0"], ocv1=bs["ocv1"],
             R0=bs["R0"], R1=bs["R1"], tau1=bs["tau1"], eta=bs["eta_c"], Eres=Eres,
-            Imax=gf["I_max"], Icont=gf["I_cont"], B=B, klim=gf["k_lim"], tau_lib=gf["tau_lib"],
+            Imax=gf["I_max"], Icont=gf["I_cont"], B=B, klim=gf["k_lim"], kp_lim=gf["kp_lim"], tau_lib=gf["tau_lib"],
             eps_i=gf["eps_i"], eps_th=gf["eps_th"], mth=gf["margen_th"], ath=gf["ancho_th"],
             ploss0=sum(real, Sgen) - sum(PL), esc=esc, nuevo_esc=nuevo_esc)
 end
@@ -97,7 +101,15 @@ ilimite(ϑ, s) = s.Icont + (s.Imax - s.Icont) * sigm((s.mth * s.B - ϑ) / (s.ath
 function algebra(x, s, e)
     T = eltype(x)
     E = Complex{T}[s.Eg * cis(x[1]); [x[igfm(i)+3] * cis(x[igfm(i)+1]) for i in 1:2]]
-    I = e.Yred * E
+    V = e.W * E
+    Iiny = zeros(Complex{T}, length(V))
+    if any(!iszero, e.Sc)                                    # carga a potencia constante: punto fijo en V
+        for _ in 1:N_PF
+            Iiny = -conj.(e.Sc ./ V)
+            V = e.W * E + e.Z * Iiny
+        end
+    end
+    I = e.Yred * E - transpose(e.W) * Iiny
     Sint = E .* conj.(I)
     pg = real(Sint[1]) * s.Sb / s.Sg
     out = map(1:2) do i
@@ -112,8 +124,11 @@ function algebra(x, s, e)
         ib = (vo - sqrt(max(vo^2 - 4s.R0 * pb, 1e-9))) / (2s.R0)
         (p=p, q=q, U=abs(Vt), iac=iac, pb=pb, ib=ib, vbat=vo - s.R0 * ib, ilim=ilimite(x[k+8], s))
     end
-    return (E=E, I=I, Sint=Sint, pg=pg, g=out)
+    return (E=E, I=I, Sint=Sint, V=V, pg=pg, g=out)
 end
+
+"Exceso de corriente y de potencia del BESS [pu del inversor] que ve el limitador."
+exceso_lim(g, s, i) = rampa(g.iac - g.ilim, s.eps_i) + s.Pn[i] / s.S[i] * rampa(g.pb - 1, s.eps_i)
 
 "Lado derecho dx/dt = f(x, θ) para el escenario e."
 function rhs!(dx, x, (s, e, θ), t)
@@ -127,7 +142,8 @@ function rhs!(dx, x, (s, e, θ), t)
     for i in 1:2
         k, g = igfm(i), a.g[i]
         H, D, Kq, K = θ[i], θ[2+i], θ[4+i], θ[6+i]
-        pred = e.lim * x[k+9]                                    # reducción de consigna del limitador
+        exceso = exceso_lim(g, s, i)
+        pred = e.lim * (x[k+9] + s.kp_lim * exceso)              # reducción de consigna del limitador (PI)
         dx[k+1] = s.wb * (x[k+2] - 1)
         dx[k+2] = (s.p0[i] - pred - g.p - D * (x[k+2] - 1)) / (2H)
         dx[k+3] = K * (Kq * (s.U0[i] - g.U) + s.q0[i] - x[k+4])
@@ -139,7 +155,7 @@ function rhs!(dx, x, (s, e, θ), t)
         dx[k+8] = rampa(g.iac^2 - s.Icont^2, s.eps_th)           # presupuesto térmico consumido [pu²·s]
         # Limitador: integra el exceso de corriente sobre el límite vigente y el exceso de potencia del BESS
         # sobre su potencia nominal; se libera cuando ambos vuelven bajo su límite.
-        dx[k+9] = s.klim * (rampa(g.iac - g.ilim, s.eps_i) + s.Pn[i] / s.S[i] * rampa(g.pb - 1, s.eps_i)) -
+        dx[k+9] = s.klim * exceso -
                   x[k+9] / s.tau_lib * sigm((g.ilim - g.iac) / s.eps_i) * sigm((1 - g.pb) / s.eps_i)
     end
     return nothing

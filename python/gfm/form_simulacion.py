@@ -19,7 +19,7 @@ from .pso import pso
 GRUPOS = {"R2": ["df_max", "rocof"],
           "R3": ["I1_max", "I2_max", "th1", "th2", "I1_fin", "I2_fin"],
           "R4": ["ib1_max", "ib2_max", "vbat1_min", "vbat2_min", "pb1_max", "pb2_max",
-                 "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max"],
+                 "pb1_sost", "pb2_sost", "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max"],
           "R5": ["E1_serv", "E2_serv"],
           "R6": ["V_banda"]}
 SOSTENIDAS = {"th1", "th2", "I1_fin", "I2_fin", "pb1_max", "pb2_max"}     # en modo L las maneja el limitador
@@ -35,7 +35,8 @@ class ProblemaCN:
         reserva: fracción de energía reservada (por defecto la del archivo de parámetros).
         p_max: agrega las restricciones del artículo base, P ≤ Pmax del inversor y del BESS.
         eps_V: cota relativa a θ0 por escenario y modo; infinito la desactiva.
-        zeta_min: amortiguamiento oscilatorio mínimo (sólo escenarios de diseño).
+        zeta_min: amortiguamiento mínimo en el equilibrio post-evento, con el limitador libre en L; 0 lo desactiva
+        (sólo escenarios exportados por Julia, por defecto el del archivo de parámetros).
         margen: exige g_oráculo ≤ -margen en las restricciones de trayectoria seleccionadas."""
         o = p["optimizacion"]
         self.orac, self.p, self.c, self.escs, self.idx, self.ab = orac, p, c, escs, list(idx), ab
@@ -43,9 +44,9 @@ class ProblemaCN:
         self.eps_V = o["eps_V"] if eps_V is None else eps_V
         self.eps = (self.eps_V * np.array([orac.evaluar(o["theta_inicial"], k, self.lim)[0]["vdev"]
                                          for k in self.idx]) if np.isfinite(self.eps_V) else None)
-        self.zeta_min, self.margen = zeta_min, margen
-        if zeta_min is not None:
-            assert set(self.idx) <= {0, 1, 2}, "ζ sólo admite escenarios de diseño de datos.cargar()"
+        self.zeta_min, self.margen = o["zeta_min"] if zeta_min is None else zeta_min, margen
+        if self.zeta_min > 0:
+            assert max(self.idx) < len(p["escenario"]), "ζ necesita un escenario de datos.cargar()"
         self.cache_zeta = {}
         nombres = [n for gname in grupos for n in GRUPOS[gname] if not (modo == "L" and n in SOSTENIDAS)]
         self.cols = [orac.ig[n] for n in nombres]
@@ -112,10 +113,12 @@ class ProblemaCN:
         th = self.theta(z, s)
         clave = (s, *th)
         if clave not in self.cache_zeta:
-            A, _ = linealizar(self.c, {**self.escs[s], "lim": self.lim}, th)
-            ev = np.linalg.eigvals(A)
-            osc = ev[np.abs(ev.imag) > 1e-6]
-            self.cache_zeta[clave] = float(np.min(-osc.real / np.abs(osc))) if len(osc) else 1.0
+            try:                                            # sin equilibrio post-evento: se penaliza como inestable
+                A, res = linealizar(self.c, {**self.escs[s], "lim": self.lim}, th)
+                ev = np.linalg.eigvals(A)
+                self.cache_zeta[clave] = float(np.min(-ev.real / np.abs(ev))) if res < 1e-6 else -1.0
+            except (RuntimeError, np.linalg.LinAlgError):
+                self.cache_zeta[clave] = -1.0
         return self.cache_zeta[clave]
 
     def g(self, z):
@@ -130,7 +133,7 @@ class ProblemaCN:
             partes.append(-gs - self.margen)
             if self.eps is not None:
                 partes.append(np.array([1 - m["vdev"] / self.eps[s]]))
-            if self.zeta_min is not None:
+            if self.zeta_min > 0:
                 partes.append(np.array([(self.zeta(z, s) - self.zeta_min) / self.zeta_min]))
             if self.p_max:
                 partes.append(1.0 - np.array([m["p1_max"], m["p2_max"], m["pb1_pico"], m["pb2_pico"]]))
