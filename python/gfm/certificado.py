@@ -22,22 +22,22 @@ from .modelo import NX, construir, igfm, simular
 AC_RED = [1, 2, 3] + [igfm(i) + k for i in range(2) for k in (0, 1, 2, 3)]   # ωg, xg, xr, δi, ωi, Ei, qmi
 
 
-def linealizar(c, e, th, T_eq=60.0):
-    """Matriz A del subsistema AC en el equilibrio post-perturbación (ángulos relativos a δg)."""
+_CACHE = {}
+
+
+def _funciones(c, e, T_eq):
+    """Simulador, campo reducido y jacobiano del escenario, compilados una vez (la sintonía es parámetro)."""
     AC = AC_RED + ([igfm(i) + 8 for i in range(2)] if e["lim"] else [])      # en L el limitador queda en el lazo
+    clave = (id(c), e["lim"], T_eq, e["Y"].tobytes(), e["x0"].tobytes(), e["pfv"].tobytes(), e["Sc"].tobytes())
+    if clave in _CACHE:
+        return _CACHE[clave]
     f, _ = construir(c, e)
-    X = simular(f, e["x0"], th, np.arange(0.0, T_eq + 0.05, 0.1))    # punto de partida cercano al equilibrio
-    xb = X[:, -1].copy()
-    z, wb = ca.SX.sym("z", len(AC)), c["wb"]
-
-    def x_de(zz):
-        x = ca.SX(xb)
-        x[0] = 0
-        for j, k in enumerate(AC):
-            x[k] = zz[j]
-        return x
-
-    dx = f(x_de(z), th)
+    z, xb, th, wb = ca.SX.sym("z", len(AC)), ca.SX.sym("xb", NX), ca.SX.sym("th", 8), c["wb"]
+    x = ca.SX(xb)
+    x[0] = 0
+    for j, k in enumerate(AC):
+        x[k] = z[j]
+    dx = f(x, th)
     dz = []
     for j, k in enumerate(AC):
         if k in (igfm(0), igfm(1)):                          # δi relativo: d(δi-δg)/dt = ωb(ωi - ωg)
@@ -45,14 +45,25 @@ def linealizar(c, e, th, T_eq=60.0):
         else:
             dz.append(dx[k])
     dz = ca.vertcat(*dz)
-    z0 = xb[AC].copy()
+    pr = ca.vertcat(xb, th)
+    F = ca.Function("F", [z, pr], [dz])
+    xs, ps = ca.MX.sym("x", NX), ca.MX.sym("p", 8)
+    sim = ca.integrator("sim", "cvodes", {"x": xs, "p": ps, "ode": f(xs, ps)}, 0, T_eq,
+                        {"abstol": 1e-9, "reltol": 1e-7, "max_num_steps": 100000})
+    _CACHE[clave] = (AC, sim, F, ca.rootfinder("eq", "newton", F), ca.Function("J", [z, pr], [ca.jacobian(dz, z)]))
+    return _CACHE[clave]
+
+
+def linealizar(c, e, th, T_eq=60.0):
+    """Matriz A del subsistema AC en el equilibrio post-perturbación (ángulos relativos a δg)."""
+    AC, sim, F, raiz, J = _funciones(c, e, T_eq)
+    xb = np.asarray(sim(x0=e["x0"], p=th)["xf"]).ravel()             # punto de partida cercano al equilibrio
+    pr, z0 = np.r_[xb, th], xb[AC].copy()
     for j, k in enumerate(AC):
         if k in (igfm(0), igfm(1)):
             z0[j] = xb[k] - xb[0]
-    raiz = ca.rootfinder("eq", "newton", ca.Function("F", [z], [dz]))
-    zeq = np.asarray(raiz(z0)).ravel()
-    A = np.asarray(ca.Function("J", [z], [ca.jacobian(dz, z)])(zeq))
-    return A, np.max(np.abs(np.asarray(ca.Function("F", [z], [dz])(zeq))))
+    zeq = np.asarray(raiz(z0, pr)).ravel()
+    return np.asarray(J(zeq, pr)), np.max(np.abs(np.asarray(F(zeq, pr))))
 
 
 def _resolver(pr):
