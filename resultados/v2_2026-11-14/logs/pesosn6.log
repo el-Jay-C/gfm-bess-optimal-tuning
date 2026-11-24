@@ -1,0 +1,12 @@
+[11:29:50] wv=0.0 wl=0.1: mejor J = 0.58272 (6/6 factibles, 3 en el mejor)
+[11:32:48] wv=0.1 wl=0.1: mejor J = 0.58762 (6/6 factibles, 3 en el mejor)
+[11:36:40] wv=1.0 wl=0.1: mejor J = 0.63164 (6/6 factibles, 3 en el mejor)
+[11:42:26] wv=10.0 wl=0.1: mejor J = 0.88998 (5/6 factibles, 2 en el mejor)
+[11:50:32] wv=100.0 wl=0.1: mejor J = 3.02659 (6/6 factibles, 4 en el mejor)
+[11:53:12] wv=1.0 wl=0.0: mejor J = 0.62621 (6/6 factibles, 2 en el mejor)
+[11:56:23] wv=1.0 wl=1.0: mejor J = 0.68053 (6/6 factibles, 2 en el mejor)
+[11:59:04] Kq=10.0: mejor J = 0.63165 (6/6 factibles, 3 en el mejor)
+[12:02:43] Kq=20.0: mejor J = 0.65294 (6/6 factibles, 2 en el mejor)
+[12:06:34] Kq=30.0: mejor J = 0.66357 (6/6 factibles, 3 en el mejor)
+[12:09:41] Kq=50.0: mejor J = 0.67402 (6/6 factibles, 4 en el mejor)
+[12:09:41] Listo: pesos

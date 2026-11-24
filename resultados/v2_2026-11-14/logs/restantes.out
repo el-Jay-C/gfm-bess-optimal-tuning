@@ -1,0 +1,1 @@
+Terminated                 "$PY" python/ejecutar_experimentos.py $1 > "resultados/logs/$(echo $1 | tr -d ' -').log" 2>&1

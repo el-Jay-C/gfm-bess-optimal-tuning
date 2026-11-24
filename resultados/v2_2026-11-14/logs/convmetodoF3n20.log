@@ -1,0 +1,21 @@
+[11:20:17] F3 corrida 0: 189.3 s, J = 0.73104, violación 0.0e+00
+[11:22:53] F3 corrida 1: 156.7 s, J = 0.68065, violación 6.2e-05
+[11:25:41] F3 corrida 2: 167.9 s, J = 0.68051, violación 6.2e-05
+[11:28:25] F3 corrida 3: 163.7 s, J = 0.63380, violación 3.0e-05
+[11:31:16] F3 corrida 4: 171.3 s, J = 0.66672, violación 5.0e-01
+[11:33:58] F3 corrida 5: 161.5 s, J = 0.75055, violación 2.8e-02
+[11:36:51] F3 corrida 6: 173.0 s, J = 0.67708, violación 7.4e-03
+[11:39:26] F3 corrida 7: 154.8 s, J = 0.63175, violación 6.7e-05
+[11:42:04] F3 corrida 8: 157.9 s, J = 0.64052, violación 8.3e-05
+[11:44:42] F3 corrida 9: 157.4 s, J = 0.68227, violación 5.3e-05
+[11:47:15] F3 corrida 10: 153.7 s, J = 0.64423, violación 0.0e+00
+[11:50:21] F3 corrida 11: 185.0 s, J = 0.68261, violación 7.1e-05
+[11:53:19] F3 corrida 12: 178.4 s, J = 0.74681, violación 3.4e-02
+[11:56:21] F3 corrida 13: 181.8 s, J = 0.64504, violación 4.7e-01
+[11:59:32] F3 corrida 14: 191.3 s, J = 0.66433, violación 0.0e+00
+[12:02:32] F3 corrida 15: 179.3 s, J = 0.66391, violación 1.0e-04
+[12:05:10] F3 corrida 16: 158.1 s, J = 0.67708, violación 7.4e-03
+[12:07:45] F3 corrida 17: 154.8 s, J = 0.64948, violación 0.0e+00
+[12:10:07] F3 corrida 18: 141.7 s, J = 0.63291, violación 0.0e+00
+[12:12:15] F3 corrida 19: 128.4 s, J = 0.63154, violación 8.8e-05
+[12:12:15] Listo: conv

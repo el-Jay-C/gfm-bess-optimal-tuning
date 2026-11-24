@@ -1,0 +1,8 @@
+[11:29:43] Artículo: cotas + P ≤ Pmax: mejor J = 0.63375 (4/6 factibles, 3 en el mejor)
+[11:37:15] + R2 frecuencia y R6 tensión: mejor J = 0.63418 (4/6 factibles, 4 en el mejor)
+[11:42:33] + R3 corriente: mejor J = 0.63422 (3/6 factibles, 3 en el mejor)
+[11:45:22] + R4 límites del BESS: mejor J = 0.65999 (3/6 factibles, 3 en el mejor)
+[11:50:56] + R5 energía de servicio: mejor J = 0.65999 (2/6 factibles, 2 en el mejor)
+[11:56:24] + R7-R8 inercia: mejor J = 0.56094 (0/6 factibles, 0 en el mejor)
+[11:59:36] + R9 control de tensión (P): mejor J = 0.63164 (6/6 factibles, 3 en el mejor)
+[11:59:37] Listo: ablacion

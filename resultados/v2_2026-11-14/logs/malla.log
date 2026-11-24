@@ -1,0 +1,4 @@
+[12:44:01] malla ×1: Solve_Succeeded J = 0.664425, Julia 0.663717, violación 0.0e+00, 30 s
+[12:47:17] malla ×2: Solve_Succeeded J = 0.632641, Julia 0.632355, violación 0.0e+00, 161 s
+[12:53:39] malla ×4: Solve_Succeeded J = 0.632222, Julia 0.632047, violación 0.0e+00, 301 s
+[12:53:44] Listo: malla

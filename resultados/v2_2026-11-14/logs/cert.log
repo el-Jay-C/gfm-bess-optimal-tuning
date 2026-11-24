@@ -1,0 +1,23 @@
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py:61: UserWarning: Solution may be inaccurate. Try another solver, adjusting the solver settings, or solve with verbose=True for more information.
+  pr.solve(solver=solver, **opts)
+[13:31:50] inicial: ζ mín = 0.077, α común (SDP) = 0.2130, α mín por autovalores = 0.2138
+[13:31:50] F1_articulo: ζ mín = 0.234, α común (SDP) = 0.2144, α mín por autovalores = 0.2152
+[13:31:50] opt_R: ζ mín = 0.061, α común (SDP) = 0.2140, α mín por autovalores = 0.2148
+[13:31:50] opt_L: ζ mín = 0.083, α común (SDP) = 0.1895, α mín por autovalores = 0.1902
+[13:31:50] minmax: ζ mín = 0.120, α común (SDP) = 0.2218, α mín por autovalores = 0.2227
+[13:31:50] esperado: ζ mín = 0.120, α común (SDP) = 0.2218, α mín por autovalores = 0.2227
+[13:31:50] cvar80: ζ mín = 0.120, α común (SDP) = 0.2218, α mín por autovalores = 0.2227
+[13:31:50] afin_minmax: ζ mín = 0.048, α común (SDP) = -inf, α mín por autovalores = 0.1955
+[13:31:50] Listo: cert

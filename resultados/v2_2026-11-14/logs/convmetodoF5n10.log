@@ -1,0 +1,9 @@
+[12:43:22] F5: NLP construido en 3.4 s (1461 variables, 17326 restricciones)
+[12:49:47] F5 corrida 3: 385.5 s, J = 0.38762, violación 3.5e+01
+[12:51:03] F5 corrida 4: 74.9 s, J = 0.66120, violación 5.9e-05
+[12:53:20] F5 corrida 5: 134.7 s, J = 0.63166, violación 2.0e-05
+[12:55:05] F5 corrida 6: 102.9 s, J = 0.63166, violación 2.0e-05
+[13:00:11] F5 corrida 7: 306.4 s, J = 0.56064, violación 2.7e+01
+[13:01:45] F5 corrida 8: 92.5 s, J = 0.63166, violación 2.0e-05
+[13:06:56] F5 corrida 9: 309.8 s, J = 0.72319, violación 1.0e-08
+[13:06:56] Listo: conv

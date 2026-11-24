@@ -1,0 +1,25 @@
+[11:48:24] reserva 0.03: mejor J = 0.50766 (0/3 factibles, 0 en el mejor)
+[11:50:16] reserva 0.03: J = 1.05630, dJ/dρ multiplicador -61.4923, diferencias nan
+[11:53:37] reserva 0.04: mejor J = 0.59358 (0/4 factibles, 0 en el mejor)
+[12:03:03] reserva 0.04: J = 1.05584, dJ/dρ multiplicador -63.0316, diferencias nan
+[12:06:24] reserva 0.05: mejor J = 0.63164 (4/4 factibles, 2 en el mejor)
+[12:08:55] reserva 0.05: J = 0.63422, dJ/dρ multiplicador -11.0381, diferencias -6.1376
+[12:09:13] reserva 0.06: mejor J = 0.59971 (4/4 factibles, 2 en el mejor)
+[12:11:50] reserva 0.06: J = 0.59211, dJ/dρ multiplicador -0.0000, diferencias 0.1610
+[12:12:07] reserva 0.08: mejor J = 0.58671 (4/4 factibles, 2 en el mejor)
+[12:13:46] reserva 0.08: J = 0.59114, dJ/dρ multiplicador -0.0000, diferencias 1.3116
+[12:13:46] reserva 0.1: mejor J = 0.58671 (4/4 factibles, 2 en el mejor)
+[12:16:31] reserva 0.1: J = 0.59210, dJ/dρ multiplicador -0.0000, diferencias -0.0000
+[12:16:34] reserva 0.15: mejor J = 0.58671 (4/4 factibles, 2 en el mejor)
+[12:19:25] reserva 0.15: J = 0.59114, dJ/dρ multiplicador -0.0000, diferencias 0.0644
+[12:19:45] dP 20.0 modo R: mejor J = 0.14986 (3/3 factibles, 3 en el mejor)
+[12:20:42] dP 30.0 modo R: mejor J = 0.22500 (4/4 factibles, 2 en el mejor)
+[12:21:01] dP 40.0 modo R: mejor J = 0.32732 (4/4 factibles, 4 en el mejor)
+[12:24:24] dP 50.0 modo R: mejor J = 0.63171 (4/4 factibles, 1 en el mejor)
+[12:24:41] dP 60.0 modo R: mejor J = 0.82061 (0/4 factibles, 0 en el mejor)
+[12:24:58] dP 20.0 modo L: mejor J = 0.14980 (3/3 factibles, 2 en el mejor)
+[12:26:09] dP 30.0 modo L: mejor J = 0.22517 (4/4 factibles, 3 en el mejor)
+[12:26:22] dP 40.0 modo L: mejor J = 0.32770 (4/4 factibles, 4 en el mejor)
+[12:26:31] dP 50.0 modo L: mejor J = 0.50679 (4/4 factibles, 4 en el mejor)
+[12:26:46] dP 60.0 modo L: mejor J = 0.79468 (4/4 factibles, 4 en el mejor)
+[12:26:48] Listo: barridos

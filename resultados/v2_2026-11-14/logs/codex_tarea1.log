@@ -1,0 +1,2061 @@
+Reading additional input from stdin...
+OpenAI Codex v0.159.2
+--------
+workdir: /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+model: gpt-6.1-sol
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR]
+reasoning effort: medium
+reasoning summaries: none
+session id: 01a1da69-d6ad-7eb1-9a44-0ddaeecfbd14
+--------
+user
+Ejecuta la tarea descrita en Codigos_final/TAREA_CODEX_1.md. Léela completa antes de empezar.
+codex
+Leeré completo `Codigos_final/TAREA_CODEX_1.md` antes de empezar.
+
+exec
+/usr/bin/zsh -lc 'cat Codigos_final/TAREA_CODEX_1.md' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 2ms:
+# Tarea 1 (Codex): figuras y tablas del informe final
+
+Contexto: lee `CONTINUAR.md` (raíz del proyecto) y `Informe/informe_final.tex` (ya escrito; usa `\input{tablas/...}`
+y tres figuras). Los experimentos siguen corriendo: **no lances ni mates procesos de `ejecutar_experimentos.py`,
+`servidor.jl` ni `ejecutar_todo.sh`**, y no modifiques nada fuera de los dos scripts y las carpetas de salida.
+Python: `/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python` (matplotlib y pandas instalados).
+
+Reescribe por completo (son los del avance, obsoletos) con código mínimo, sin clases ni abstracciones:
+
+## `Codigos_final/python/graficar.py` → PDF en `Informe/figuras/`
+Conserva el estilo `plt.rcParams` y la paleta `SERIES` del archivo actual. Ancho de columna IEEE: 3,5 in. Texto en español.
+Si falta un CSV, omite esa figura con un aviso (no falles).
+1. `trayectorias_final.pdf` desde `resultados/trayectorias.csv` (columnas `sintonia, lim, t, f_sg, f1, f2, I1, I2,
+   p1, p2, ..., pb1, pb2, ..., pred1, pred2, ...`). Tres paneles apilados (3×1, eje x compartido, 0–30 s):
+   `f_sg` [Hz], `I1` [pu], `pb1` [pu]. Sintonías `inicial`, `F1_articulo`, `opt_R`, `opt_L` con `lim == 1`
+   (línea continua) y, sólo para `F1_articulo`, también `lim == 0` en línea discontinua (lo que predice su modelo
+   sin limitador). Líneas de referencia punteadas: 1,0 pu en los paneles de corriente y potencia, 1,3 pu en corriente.
+   Etiquetas legibles: «θ inicial», «F1 artículo», «Óptimo R», «Óptimo L».
+2. `convergencia_final.pdf` desde `resultados/conv_F*.csv` (columnas `formulacion, corrida, iter, t_s, J_real,
+   viol_real`). Perfil de datos: para cada formulación, fracción de corridas que ya tiene un iterado factible
+   (`viol_real <= 1e-3`) con `J_real <= 1.01·J*` en función del tiempo (escalón acumulado, eje x logarítmico en s).
+   `J*` = menor `J_real` factible entre todas las corridas de `corridas_F*.csv`. El denominador es el número de
+   corridas de cada formulación (léelo de `corridas_<F>.csv`). Etiquetas: F1 artículo (SQP+PSO), F2 SQP,
+   F3 PSO, F4 colocación, F4b colocación L-BFGS, F5 disparo múltiple.
+3. `barridos_final.pdf` desde `resultados/barridos.csv` (columnas `barrido, valor, J, J_modelo, dfmax_Hz,
+   dJ_drho_multiplicador, dJ_drho_diferencias, ...`). Dos paneles 1×2. Izquierda: filas `barrido == "reserva"`,
+   `J_modelo` contra `100·valor` [% de energía reservada], con un segmento corto tangente en cada punto de pendiente
+   `dJ_drho_multiplicador/100`. Derecha: `dfmax_Hz` contra `valor` [MW] para `barrido == "dP_R"` y `"dP_L"`.
+
+## `Codigos_final/python/resumen.py` → tablas en `Informe/tablas/*.tex` y números clave por stdout
+Coma decimal en las tablas (`0{,}632`). Cada archivo contiene el `tabular` completo con booktabs.
+Si falta un CSV, escribe igualmente el `.tex` con una fila «pendiente» (el informe debe compilar siempre).
+1. `sintonias.tex`: una fila por sintonía de `resultados/optimos.csv` (orden del archivo). Columnas: nombre legible,
+   H1, H2, D1, D2, Kq1, Kq2, K1, K2, y desde `resultados/validacion.csv` en el escenario `S1_carga_b5`:
+   `J` y `dfmax_Hz` con `lim == 1`, `I1_fin`, `pb1_pico`, `pred1_max` con `lim == 1`, `max_violacion` con `lim == 0`
+   (violación del problema (P) en modo R), y `zeta_min` de `resultados/certificados.csv`.
+2. `ablacion.tex` desde `resultados/ablacion.csv` (`caso, H1..K2, J, dfmax_Hz, viol_P, activas`): caso, H1, H2, D1,
+   D2, Kq1, Kq2, Δf_max [Hz], J, viol_P.
+3. `convergencia.tex` desde `corridas_F*.csv`: por formulación: corridas; factibles (`viol_real <= 1e-3`); en la
+   mejor cuenca (factibles con `J_real <= 1.005·J*`); mediana de `J_real` de las factibles; mediana de `t_total_s`;
+   mediana de `n_eval` (F1–F3) o de `iteraciones` (F4, F4b, F5); `n_var` si existe.
+4. `robusto.tex` desde `resultados/robusto.csv` (`sintonia, criterio, J, J_S1, J_S2, J_S3, J_max, J_esp, ...`) y
+   `resultados/fuera_muestra.csv` (`sintonia, muestra, ..., J, dfmax_Hz, max_violacion, factible, J_lim, ...`):
+   por sintonía: J_S1, J_S2, J_S3, J_max, J_esp, y fuera de muestra % factible y J medio (guion si la sintonía no
+   está en `fuera_muestra.csv`).
+5. Por stdout, para redactar: restricciones activas y multiplicadores de `modos.csv`; `pesos.csv` completo;
+   `malla.csv`; resumen de `validacion_densa.csv`, `largo_plazo.csv`, `escalon_tension.csv`, `certificados.csv`.
+
+## Verificación obligatoria
+Ejecuta ambos scripts con los CSV que existan ahora (`conv_F1/F2/F3/F4b`, `corridas_*`; el resto aún no existe) y
+comprueba que no fallan y que generan `convergencia_final.pdf` y los cuatro `.tex`. Luego compila
+`cd Informe && pdflatex -interaction=nonstopmode informe_final.tex` (dos veces, con `bibtex informe_final` entre
+medio) y corrige sólo errores de compilación causados por las tablas o figuras (para figuras aún inexistentes
+genera el PDF con un texto «pendiente»). Informa en ≤ 15 líneas: qué escribiste, qué verificaste y qué no pudiste.
+
+exec
+/usr/bin/zsh -lc "rg --files -g AGENTS.md -g '"'!node_modules'"' -g '"'!venv'"'" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ exited 1 in 2ms:
+exec
+/usr/bin/zsh -lc 'cat CONTINUAR.md Informe/informe_final.tex' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 15ms:
+# Cómo continuar el informe final (Grupo 02, IEE3002)
+
+Traspaso para otro agente o para el equipo. Estado al 2026-11-14, 11:15.
+Encargo original: revisar `Lista_de_mejoras.md` (corrección del avance, 45/55), incorporar el limitador de corriente
+(el profesor observó que las variables quedaban en sus cotas) y dejar un buen proyecto final.
+
+## 1. Dónde está cada cosa
+
+| Qué | Ruta |
+|---|---|
+| Código nuevo (única carpeta que se edita) | `Codigos_final/` |
+| Código del avance (no tocar) | `Codigos_NUEVOS/` |
+| Python con casadi, cvxpy, scipy | `/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python` (usar ruta absoluta) |
+| Julia | `julia --project=julia` desde `Codigos_final/` |
+| Parámetros únicos | `Codigos_final/datos/parametros.toml` |
+| Resultados y logs | `Codigos_final/resultados/`, `resultados/logs/` |
+| Informe del avance (base de redacción) | `Informe/main.tex` |
+| Bibliografía (27 entradas, ya ampliada) | `Informe/referencias.bib` |
+| Informe final | `Informe/informe_final.tex` — **aún no existe** |
+
+## 2. Qué cambió respecto del avance (ya hecho y probado)
+
+- Modelo de 22 estados: cada GFM suma un presupuesto térmico I²t (ϑ) y una reducción de la consigna de potencia
+  (`pred`) que actúa si la corriente supera el límite vigente o el BESS supera su potencia nominal.
+  `julia/src/modelo.jl` y `python/gfm/modelo.py` son equivalentes (`python/test_consistencia.py`, error < 4e-5).
+- Contingencia de 50 MW (la misma que fija R7), T = 30 s, malla 25 ms / 50 ms, consignas 1,04 / 1,025 / 1,015 pu.
+- Restricciones nuevas: energía de servicio a 300 s con reserva del 5 %, inercia efectiva R8b (AT-IBR 7-6 k),
+  R9 con cota superior (separación de escalas con el filtro de Q).
+- Dos formulaciones: **modo R** (restricciones que impiden que el limitador actúe; dinámica sin limitador) y
+  **modo L** (limitador en la dinámica; sólo límites de pico como restricciones).
+- Multiescenario con una sola sintonía: min–max, valor esperado, CVaR y regla de decisión afín (recurso real).
+  La «F7» del avance no era de dos etapas: se renombra a valor esperado.
+- Certificado: función de Lyapunov común a los tres escenarios (SDP), `python/gfm/certificado.py`.
+- Correcciones tras la auditoría eléctrica (2026-11-14): `margen_th = 1.0` (mismo presupuesto que ϑ ≤ B),
+  métricas `alivio_carga`, `pb*_fin`, `pb*_pico`; `conv` guarda cada corrida y se reanuda sola.
+
+## 3. Experimentos: qué corre ahora y cómo revisarlo
+
+Lanzado a las 11:10 con `Codigos_final/ejecutar_todo.sh` (desacoplado con `setsid nohup`, 5 procesos en paralelo).
+Termina cuando existe `resultados/logs/TERMINADO` (estimado: 2,5 a 3,5 h).
+
+```bash
+tail -n 2 "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/resultados/logs/"*.log
+```
+
+Si se cortó, relanzar es seguro (`conv` se reanuda; el resto recalcula):
+
+```bash
+cd "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final" && PY="/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python" setsid nohup ./ejecutar_todo.sh > resultados/logs/todo.out 2>&1 < /dev/null &
+```
+
+| Experimento | Salida | Qué responde (ítem de la lista) |
+|---|---|---|
+| `conv` F1–F5, F4b | `conv_*.csv`, `corridas_*.csv` | estadística de convergencia desde los mismos 20 arranques (B) |
+| `modos` | `modos.csv` | restricciones frente a limitador; multiplicadores |
+| `ablacion` | `ablacion.csv` | comparación justa con el artículo: se agrega un grupo de restricciones a la vez (B) |
+| `pesos` | `pesos.csv` | sensibilidad a los pesos y a Kq fijo |
+| `barridos` | `barridos.csv` | reserva de energía (multiplicador frente a diferencias centradas) y tamaño del escalón |
+| `robusto` | `robusto.csv` | min–max, esperado, CVaR, regla afín |
+| `malla` | `malla.csv` | refinamiento ×1, ×2, ×4 |
+| `optimos` → `cert` | `optimos.csv`, `certificados.csv` | amortiguamiento ≥ 5 % y Lyapunov común |
+| `julia/validar.jl` (**sin probar**) | `validacion*.csv`, `largo_plazo.csv`, `trayectorias.csv`, `fuera_muestra.csv`, `escalon_tension.csv` | validación fuera de la malla, 300 s, 500 escenarios nuevos, AT-IBR 3-3 |
+
+Resultados ya conocidos (S1, modo R, 20 arranques con SQP): tres cuencas, J = 0,6316 (7/20), 0,6615 (3/20) y
+0,6754 (9/20). Mejor sintonía: H = 2,90 / 4,10 s, D = 27,8 / 23,3, Kq = 10 / 10, K = 0,279 / 0,277.
+Activas: potencia pico del BESS1, energía de servicio del BESS2, R8b del GFM2, R9 lenta, Kq en cota inferior.
+Modo L (preliminar, antes de `margen_th = 1.0`): J ≈ 0,507 con H1 y D1 en cotas y `pred1` sostenido.
+
+## 4. Lo que falta, en orden
+
+1. **Revisar los logs** de `pesos`, `barridos`, `robusto` y `validar` apenas escriban: son los caminos de código
+   que no se probaron completos después de los últimos cambios.
+2. **`python/graficar.py` y `python/resumen.py`**: son todavía los del avance. Reescribir para los CSV nuevos.
+   Figuras previstas (pocas, el informe es de 8 páginas): (a) trayectorias S1 de frecuencia, corriente y potencia
+   del BESS para θ inicial, F1, opt_R y opt_L, con y sin limitador (`trayectorias.csv`); (b) J contra tiempo de
+   cómputo por formulación, mediana y banda (`conv_*.csv`, usar `J_real` y `viol_real`); (c) barrido de reserva
+   con la pendiente del multiplicador superpuesta (`barridos.csv`).
+3. **`Informe/informe_final.tex`** (IEEEtran, dos columnas, máx. 8 páginas, español, `\bibliography{referencias}`;
+   el gancho para el `.bbl` está en `Informe/Informe_1.tex` líneas 23–32). Estructura de artículo con
+   «Experimentos computacionales» y «Conclusión» en lugar de «Resultados preliminares» y «Trabajo remanente».
+   Contenido comprometido:
+   - Introducción con ≥ 10 referencias, tabla de brecha frente a Wang, Buire, She, Poolla y Krajacic, contribución
+     principal declarada y preguntas P1–P4 con su criterio de validación.
+   - Tabla de restricciones con columna «origen»: norma literal, derivada de la norma o supuesto propio (ver §5).
+   - Tabla de aproximaciones del modelo (ver §6).
+   - Experimentos: comparación justa con el artículo y ablación; R frente a L; restricciones activas y
+     multiplicadores; pesos; estadística de convergencia; robustez y fuera de muestra; validación.
+   - Correcciones de forma E1–E14 de la lista (nadir frente a Δf_max, nombres de sintonías consistentes, etc.).
+4. **`Codigos_final/README.md`**: actualizar (incluye instrucciones para Windows, ítem F de la lista).
+5. **`Lista_de_mejoras.md`**: marcar cada ítem como hecho, parcial o pendiente del equipo.
+6. Pendiente del equipo, no del agente: presentación final (G1–G6), repositorio git, conseguir el artículo [3].
+
+## 5. Origen de cada restricción (para la tabla del informe)
+
+Fuente: cuaderno NotebookLM «MsC» (id 5c691c83-192f-4d7f-9601-9895d46c5943). Pedir respuestas breves.
+
+| Restricción | Origen |
+|---|---|
+| I ≤ 1,3 pu | AT-IBR 3-1 d): capacidad mínima de diseño, «al menos 1,3 pu por 5 s» |
+| Presupuesto I²t, B = 3,45 pu²·s | **Supuesto propio** (generaliza el punto anterior) |
+| I(T) ≤ 1 pu, p_b ≤ 1 | Valores nominales del equipo |
+| Δf ≤ 1 Hz | NTSyCS 3-10 (49–51 Hz): es soportabilidad de las unidades, se usa como límite de diseño |
+| RoCoF ≤ 2 Hz/s en 500 ms | NTSyCS 3-10 c) |
+| Banda 0,93–1,07 pu | NTSyCS 5-23 (estado de alerta) |
+| D ∈ [20, 50] | AT-IBR 3-6: estatismo 2–5 % |
+| Kq ∈ [10, 50] | **Decisión de modelamiento**: AT-IBR 3-3 no fija rango de estatismo de tensión |
+| R7, inercia ≥ 625 MWs | Derivada de RoCoF ≤ 2 Hz/s con ΔP = 50 MW |
+| R8a | Hu et al.: E = 2·H·S·Δf_max/f0 ≤ E_res |
+| R8b | AT-IBR 7-6 k): inercia efectiva a 2 Hz/s dentro de la holgura de potencia |
+| R9 inferior | AT-IBR 3-3 e): tiempo de crecimiento < 1 s |
+| R9 superior | **Supuesto propio**: lazo Q–V 5 veces más lento que el filtro de Q |
+| Energía de servicio a 300 s, reserva 5 % | **Supuesto propio** (la norma disponible no fija el tiempo de sostenimiento) |
+| ζ ≥ 5 % | NTSyCS, Título 5-7 (se verifica después de optimizar, no se impone) |
+
+## 6. Supuestos que la auditoría pidió declarar
+
+- Máquina síncrona sin AVR; gobernador sin límites ni banda muerta.
+- Cargas de impedancia constante, sin dependencia de la frecuencia: al bajar la tensión baja el consumo. La métrica
+  `alivio_carga` mide qué fracción del escalón deja de consumirse en el nadir (4 a 10 % con θ inicial). Explica en
+  parte que Kq termine en su cota inferior; `pesos.csv` (caso `Kq_fijo`) cuantifica cuánto cambia J si Kq se fija.
+- En modo L la potencia transitoria del BESS no se acota en 1 pu: la limita la corriente del banco (1,2 pu), y el
+  limitador la devuelve a la nominal. Por eso R y L no son equivalentes: L mide el valor de usar la sobrecarga
+  transitoria. Decirlo así en el informe.
+- En modo L la corriente puede terminar sobre la nominal en T = 30 s; el presupuesto térmico se agota después.
+  `largo_plazo.csv` (300 s) muestra qué pasa: revisar `df_segundo_descenso` y `th*_frac`.
+- `pred` no tiene saturación superior (sin anti-windup): verificar que `pred*_max` sea mucho menor que p0 (≈ 0,67 pu).
+- El estatismo del GFM2 está en base de 60 MVA con un BESS de 20 MW (≈ 1,4 % en base del BESS).
+- El BESS1 ya entrega 40 MW antes del evento.
+- Modelo RMS: validez marginal si H baja a 0,5 s; sin prioridad P/Q ni FRT; líneas con R/X alto.
+- La suavización de `rampa` hace que ϑ crezca ≈ 0,0035 pu²·s por segundo cuando i ≈ I_cont (conservador).
+
+## 7. Convenciones del usuario
+
+Responder en español. Encabezado de una línea al inicio de cada respuesta
+(`🤖 Nivel · 🧠 Modelo · ⛓️ Arquitectura · 🛠️ Skills`). Código mínimo, sin abstracciones no pedidas.
+Consultar el grafo antes de leer en masa: `graphify query "<tema>" --budget 1200`.
+Métodos del curso (cuaderno «Opti Avanzada», id 2582a9fc-5fef-4323-a9b4-bc1e1605ab03): CVaR, robusta ajustable con
+reglas afines, LMI de Lyapunov, KKT y precios sombra. McCormick, S-lema y multiarranque **no** son del curso.
+\documentclass[10pt, journal, letterpaper]{IEEEtran}
+
+\usepackage{booktabs}
+\usepackage[cmex10]{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage{mathtools}
+\usepackage{xcolor}
+
+\renewcommand{\tablename}{Tabla}
+\renewcommand{\figurename}{Fig.}
+\renewcommand{\refname}{Referencias}
+\renewcommand{\abstractname}{Resumen}
+\newcommand{\mb}[1]{\ensuremath{\boldsymbol{#1}}}
+\newcommand{\rp}[1]{\lceil #1\rceil_{\varepsilon}}          % rampa suave
+% Valores que dependen de experimentos aún en ejecución: se reemplazan con python/resumen.py (ver CONTINUAR.md).
+\newcommand{\PEND}[1]{\textcolor{red}{[#1]}}
+\graphicspath{{figuras/}}
+\allowdisplaybreaks
+
+% Citas resueltas con pdflatex -> bibtex -> pdflatex: se leen, sin imprimir, las etiquetas del .bbl.
+\makeatletter
+\AtBeginDocument{\IfFileExists{\jobname.bbl}{%
+  \setbox\z@\vbox{%
+    \count@\z@
+    \let\newblock\relax
+    \renewenvironment{thebibliography}[1]{}{}%
+    \def\bibitem##1{\advance\count@\@ne\expandafter\xdef\csname b@##1\endcsname{\the\count@}}%
+    \input{\jobname.bbl}}}{}}
+\makeatother
+
+\begin{document}
+
+\title{Sintonía óptima de inversores \emph{grid-forming} con limitador de sobrecarga, almacenamiento e
+inercia: formulaciones dinámicas, robustez y convergencia}
+
+\author{Tomás Avendaño Sánchez, José Errázuriz León, José Milling Morales, \\
+Matías Zañartu Valdés y Xaviera Zuloaga Balmaceda
+\\ Pontificia Universidad Católica de Chile, segundo semestre de 2026}
+
+\markboth{IEE3002 -- Optimización Avanzada en Ingeniería Eléctrica -- Informe final}{}
+
+\maketitle
+
+\begin{abstract}
+Se sintonizan las ocho ganancias de dos inversores \emph{grid-forming} (GFM) con almacenamiento en un sistema
+de 5 barras ante un escalón de carga de 50~MW. El problema es de optimización dinámica no convexa: las
+restricciones de la norma chilena y del banco de baterías se exigen a lo largo de la trayectoria. A diferencia
+del avance, el modelo incluye el limitador de sobrecarga del inversor, con un presupuesto térmico que
+generaliza la exigencia de 1,3~pu durante 5~s. Se comparan dos formulaciones: una impide con restricciones
+que el limitador actúe y la otra lo incluye en la dinámica. Con la primera, la inercia y el estatismo de
+frecuencia quedan en el interior de sus cotas ($H=2{,}9$ y $4{,}1$~s; $D=27{,}8$ y $23{,}3$), fijados por la
+potencia del banco, la energía de servicio y la inercia efectiva. Seis métodos de solución parten de los
+mismos puntos iniciales: \PEND{resumen de convergencia}. Una regla de decisión afín en la generación
+fotovoltaica disponible \PEND{resultado de robustez}. Las sintonías se validan fuera de la malla, a 300~s y
+en 500 escenarios que no se usaron al optimizar.
+\end{abstract}
+
+\section{Introducción}
+
+\IEEEPARstart{L}{os} inversores \emph{grid-forming} (GFM) se comportan como fuentes de tensión y aportan
+inercia sintética y regulación de tensión~\cite{Du2021}. La NTSyCS de 2026~\cite{CNE_NTSyCS2026}, su Anexo
+Técnico IBR (AT-IBR)~\cite{CNE_ATIBR2026} y la guía de verificación del Coordinador~\cite{CEN_GuiaGFM2026}
+les exigen, entre otros, estatismo de frecuencia de 2--5~\%, control de tensión con tiempo de crecimiento
+menor a 1~s y una capacidad de sobrecorriente de al menos 1,3~pu durante 5~s. Cumplir estas exigencias
+depende de la inercia virtual $H$, del estatismo $D$, y del estatismo $K_q$ y la ganancia $K$ del lazo Q--V.
+
+\textbf{Trabajos relacionados.} La Tabla~\ref{tab:brecha} resume los trabajos más cercanos. El artículo
+base~\cite{Wang2024} ajusta el lazo activo de dos generadores síncronos virtuales (VSG) con SQP y el reactivo
+con PSO, por separado y con la potencia máxima como única restricción. Poolla \emph{et
+al.}~\cite{Poolla2017} ubican inercia virtual minimizando una norma $\mathcal H_2$ de un modelo lineal, y
+Buire \emph{et al.}~\cite{Buire2026} asignan inercia y amortiguamiento con SQP sobre un modelo linealizado.
+Krajacic \emph{et al.}~\cite{Krajacic2025} proponen una optimización dinámica de inercia y amortiguamiento que
+considera la magnitud y la ubicación de las perturbaciones, y la contrastan con la asignación $\mathcal H_2$.
+She \emph{et al.}~\cite{She2024} diseñan controladores con estabilidad certificada por LMI, y Hu \emph{et
+al.}~\cite{Hu2025} vinculan la inercia de un BESS con su energía reservada. Por otra parte, la saturación de
+corriente cambia la respuesta de un GFM~\cite{Fan2022,He2025}, por lo que una sintonía obtenida sin
+considerarla puede no ser realizable.
+
+\begin{table}[t]
+\centering
+\caption{Trabajos relacionados y brecha que aborda este proyecto}
+\label{tab:brecha}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+Trabajo & Decisiones & Modelo & Corriente y BESS & Incertidumbre \\
+\midrule
+\cite{Wang2024} & $H,D$ y $K_q,K$ separados & no lineal & sólo $P\le P_{max}$ & no \\
+\cite{Poolla2017} & $H$ & lineal ($\mathcal H_2$) & no & perturbación estocástica \\
+\cite{Buire2026} & $H,D$ & linealizado & no & no \\
+\cite{Krajacic2025} & $H,D$ & dinámico & no declarado & varias perturbaciones \\
+\cite{She2024} & ganancias de control & no lineal + LMI & no & región de atracción \\
+Este trabajo & $H,D,K_q,K$ conjuntos & no lineal & limitador, I$^2$t, BESS & escenarios, regla afín \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\textbf{Brecha y contribución.} Hasta donde se revisó, ningún trabajo sintoniza en forma conjunta ambos lazos
+imponiendo en la trayectoria la capacidad de sobrecarga del inversor, la física del BESS y los requisitos de
+inercia de la norma chilena. La contribución principal es una formulación de sintonía en que la sobrecarga
+se trata de dos maneras comparables: con restricciones que impiden que el limitador actúe, o con el limitador
+dentro de la dinámica. Las contribuciones secundarias son la comparación estadística de seis métodos de
+solución sobre el mismo problema y una sintonía robusta con recurso mediante una regla de decisión afín.
+
+\textbf{Preguntas de investigación} y criterio con que se responden.
+P1) ¿Cuánto cambia la sintonía respecto del artículo base y qué restricción explica cada cambio? Se responde
+agregando un grupo de restricciones a la vez.
+P2) ¿Qué método llega al óptimo con mayor confiabilidad y rapidez? Se mide la fracción de 20 puntos iniciales
+comunes que alcanza el mejor valor conocido y el tiempo que tarda.
+P3) ¿Qué restricciones son activas y cuánto vale relajarlas? Se contrastan los multiplicadores con la pendiente
+de un barrido.
+P4) ¿Cuánto cuesta una sintonía única para varios puntos de operación y cuánto recupera una regla afín? Se
+evalúa en escenarios que no se usaron al optimizar.
+
+\section{Modelo matemático}
+
+\subsection{Sistema de prueba y escenarios}
+Se usa el sistema de 5 barras de Stagg y El-Abiad~\cite{Stagg1968} a 230~kV y 50~Hz, con los parámetros de
+línea de~\cite{Kumari2021} y 165~MW de demanda (Fig.~\ref{fig:unilineal}). La barra~1 tiene una máquina
+síncrona (SG) térmica de 120~MVA con gobernador y recalentador~\cite{Kundur1994}. La barra~2 tiene un BESS de
+60~MW/60~MWh y la barra~3, una planta fotovoltaica (FV) de 45~MW con un BESS de 20~MW/20~MWh; ambos usan
+inversores GFM de 60~MVA. Las consignas de tensión son 1,04, 1,025 y 1,015~pu, de modo que las tres fuentes
+entregan potencia reactiva y los inversores parten con corrientes de 0,66 y 0,74~pu.
+
+La perturbación es un escalón de carga de 50~MW, la misma contingencia que fija el requisito de inercia. S1 lo
+aplica en la barra~5; S2, en la barra~4; y S3 repite S1 con 35~MW de FV disponible y un estado de carga de
+20~\%, de modo que el BESS2 ya entrega 10~MW antes del evento. Las probabilidades son 0,5, 0,3 y 0,2.
+
+\begin{figure}[t]
+\centering
+\resizebox{0.8\columnwidth}{!}{\input{figuras/diagrama_5barras}}
+\caption{Sistema de prueba: una máquina síncrona y dos inversores GFM con BESS.}
+\label{fig:unilineal}
+\end{figure}
+
+\subsection{Dinámica}
+El modelo es fasorial (RMS), como el de~\cite{Wang2024}. Cada fuente es una fem detrás de una reactancia y las
+cargas son impedancias constantes, por lo que la red se reduce por Kron a los nodos internos,
+$\mb I=\mb Y_{red}\mb E$, y el escalón sólo modifica $\mb Y_{red}$. La SG sigue la ecuación de oscilación con
+gobernador y recalentador~\cite{Kundur1994}. Cada GFM $i\in\{1,2\}$ sigue
+\begin{subequations}\label{eq:vsg}
+\begin{align}
+&\dot\delta_i = \omega_b(\omega_i-1), \quad 2H_i\dot\omega_i = p_i^0 - \rho_i - p_i - D_i(\omega_i-1), \label{eq:vsg_w}\\
+&\dot E_i = K_i\big[K_{q,i}(U_i^0-U_i) + q_i^0 - q_i^m\big], \quad \tau_q\dot q_i^m = q_i - q_i^m, \label{eq:vsg_e}
+\end{align}
+\end{subequations}
+donde $\rho_i$ es la reducción de consigna que impone el limitador. El BESS es un circuito de Thevenin de
+primer orden. Su potencia es $p_{b,i}=(p_i+R_ci_i^2-p_{fv,i})S_i/P^n_i$ y
+\begin{subequations}\label{eq:bess}
+\begin{align}
+&i_{b,i}=\big(v_o-\sqrt{v_o^2-4R_0p_{b,i}}\big)/(2R_0), \quad v_o=\mathrm{OCV}(SOC_i)-v_{rc,i},\\
+&\tau_1\dot v_{rc,i}=R_1i_{b,i}-v_{rc,i}, \quad \dot{SOC}_i=-i_{b,i}/(3600E_h),\\
+&\dot e_i=(p_{b,i}-p^0_{b,i})P^n_i,
+\end{align}
+\end{subequations}
+con $e_i$ la energía entregada sobre el punto previo.
+
+\textbf{Limitador de sobrecarga.} El AT-IBR pide una capacidad mínima de 1,3~pu durante 5~s. Se generaliza
+como un presupuesto térmico: $\vartheta_i$ acumula el exceso de $i^2$ sobre el valor nominal y el límite de
+corriente vigente $\bar\imath_i$ baja de $I_{max}$ a $I_c$ cuando el presupuesto $B=(I_{max}^2-I_c^2)\cdot5$~s
+$=3{,}45$~pu$^2$s se agota. Mientras la corriente supera $\bar\imath_i$, o el banco supera su potencia nominal,
+un lazo integral reduce la consigna de potencia; la reducción se libera cuando ambos vuelven bajo su límite:
+\begin{subequations}\label{eq:lim}
+\begin{align}
+\dot\vartheta_i &= \rp{i_i^2-I_c^2}, \qquad
+\bar\imath_i = I_c + (I_{max}-I_c)\,\sigma\!\Big(\frac{B-\vartheta_i}{aB}\Big),\\
+\dot\rho_i &= k_\ell\Big(\rp{i_i-\bar\imath_i}+\tfrac{P^n_i}{S_i}\rp{p_{b,i}-1}\Big)
+ -\frac{\rho_i}{\tau_\ell}\,\sigma\!\Big(\frac{\bar\imath_i-i_i}{\varepsilon}\Big)\sigma\!\Big(\frac{1-p_{b,i}}{\varepsilon}\Big).
+\end{align}
+\end{subequations}
+Aquí $\rp{x}=\max(x,0)+\varepsilon\ln(1+e^{-|x|/\varepsilon})$ y $\sigma$ es la sigmoide logística. Estas
+funciones suaves evitan variables binarias o condiciones de complementariedad, y mantienen el modelo
+diferenciable. Reducir la consigna de potencia ante saturación es una de las estrategias documentadas
+en~\cite{Fan2022}; la forma I$^2$t del presupuesto es un supuesto propio. En compacto,
+$\dot{\mb x}=f(\mb x,\theta)$ con 22 estados. El estado inicial es el equilibrio previo, que no depende de
+$\theta$.
+
+\subsection{Problema de optimización}
+Las decisiones son $\theta=[H_1,H_2,D_1,D_2,K_{q,1},K_{q,2},K_1,K_2]$. El objetivo pondera la desviación
+máxima de frecuencia, la desviación de tensión y el aumento de pérdidas:
+\begin{align}
+J ={}& w_f\,\frac{z_f}{\Delta f_{ref}} + \frac{w_v}{5T}\!\int_0^T\!\sum_b\!\Big(\frac{V_b-V_b^0}{\Delta V_{ref}}\Big)^2\!dt
++ \frac{w_l}{T\Delta P}\!\int_0^T\!(p_{loss}-p_{loss}^0)\,dt. \label{eq:obj}
+\end{align}
+La desviación máxima $\Delta f_{max}=\max_{u,t}|f_u(t)-f_0|$ no es diferenciable y se reemplaza por la variable
+epígrafe $z_f$. El problema (P) es
+\begin{align}
+\min_{\theta,\,z_f}\;& J \quad \text{s.a.} \quad \dot{\mb{x}}=f(\mb{x},\theta),\;\mb{x}(0)=\mb{x}_0 \tag{R1}\\
+& |f_u(t)-f_0| \le z_f \le 1\,\text{Hz},\;\; |f_u(t)-f_u(t-0{,}5)| \le 1\,\text{Hz} \tag{R2}\\
+& i_i(t) \le I_{max},\;\; \vartheta_i(T)\le B,\;\; i_i(T)\le I_c \tag{R3}\\
+& |i_{b,i}|\le 1{,}2,\; v_{b,i}\ge 0{,}85,\; |p_{b,i}|\le1,\; SOC_i\in[0{,}1;0{,}9] \tag{R4}\\
+& e_i(T) + (T_s-T)\big(p_{b,i}(T)-p_{b,i}^0\big)P^n_i \le E_i^{res} \tag{R5}\\
+& 0{,}93 \le V_b(t) \le 1{,}07 \tag{R6}\\
+& \textstyle\sum_i H_iS_i \ge 205\ \text{MWs} \tag{R7}\\
+& 2H_iS_i\,\Delta f_{max}^{lim}/f_0 \le E_i^{res},\;\; 2H_iS_i\,\dot f^{lim}/f_0 \le \Delta P_i^{disp} \tag{R8}\\
+& 2{,}2 \le K_i(K_{q,i}\alpha_i+\beta_i) \le 1/(n\tau_q),\;\; \underline\theta \le \theta \le \overline\theta \tag{R9--10}
+\end{align}
+para toda unidad $u$, GFM $i$, barra $b$ y $t\in[0,T]$. La Tabla~\ref{tab:restr} indica el origen de cada
+restricción y la Tabla~\ref{tab:param}, los parámetros.
+
+\begin{table}[t]
+\centering
+\caption{Origen de las restricciones (N: texto de la norma; D: derivada de la norma; S: supuesto propio)}
+\label{tab:restr}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+ & Restricción & Origen \\
+\midrule
+R2 & $\Delta f\le1$~Hz; RoCoF $\le2$~Hz/s en 500~ms & N: NTSyCS 3-10 (soportabilidad) \\
+R3 & $i\le1{,}3$~pu & N: AT-IBR 3-1 d) (capacidad mínima) \\
+R3 & presupuesto $\vartheta\le B$; $i(T)\le1$~pu & S: I$^2$t; corriente nominal \\
+R4 & corriente, tensión, potencia y SOC del banco & S: datos del equipo \\
+R5 & energía de servicio a $T_s=300$~s $\le5$~\% & S: no hay plazo en la norma revisada \\
+R6 & banda 0,93--1,07~pu & N: NTSyCS 5-23 \\
+R7 & inercia del sistema $\ge625$~MWs & D: RoCoF con $\Delta P=50$~MW \\
+R8 & energía inercial $\le E^{res}$ & D: Hu \emph{et al.}~\cite{Hu2025} \\
+R8 & potencia inercial a 2~Hz/s $\le$ holgura & D: AT-IBR 7-6 k) \\
+R9 & tiempo de crecimiento $\le1$~s & N: AT-IBR 3-3 e) \\
+R9 & lazo Q--V 5 veces más lento que $\tau_q$ & S: validez del modelo de 1.$^{er}$ orden \\
+R10 & $D\in[20,50]$ (estatismo 2--5~\%) & N: AT-IBR 3-6 \\
+R10 & $K_q\in[10,50]$ & S: la norma no fija este rango \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Parámetros (pu en base propia; valores GFM1/GFM2)}
+\label{tab:param}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{ll}
+\toprule
+SG & 120~MVA, $H_g=3{,}5$~s, $x'_d=0{,}25$, $D_g=1$, $R=0{,}05$, $T_G=0{,}2$~s, $T_R=7$~s, $F_H=0{,}3$ \\
+GFM & $S=60$~MVA, $X_f=0{,}15$, $\tau_q=20$~ms, $R_c=0{,}01$, $p^0=40/45$~MW, $p_{fv}=0/45$~MW \\
+Limitador & $I_{max}=1{,}3$, $I_c=1$, $B=3{,}45$~pu$^2$s, $k_\ell=2$~s$^{-1}$, $\tau_\ell=2$~s, $\varepsilon=0{,}01$, $a=0{,}02$ \\
+BESS & $P^n=60/20$~MW, $E_h=1$~h, $\mathrm{OCV}=0{,}9+0{,}2\,SOC$, $R_0=0{,}03$, $R_1=0{,}02$, $\tau_1=20$~s \\
+ & $SOC_0=0{,}5$, $\eta_c=0{,}97$, $E^{res}=10\,800/3\,600$~MWs (5~\%), $T_s=300$~s \\
+Lazo Q--V & $\alpha=0{,}352/0{,}389$, $\beta=4{,}36/4{,}04$, $n=5$ \\
+Objetivo & $T=30$~s, $w_f=w_v=1$, $w_l=0{,}1$, $\Delta f_{ref}=1$~Hz, $\Delta V_{ref}=0{,}05$~pu \\
+Cotas & $H\in[0{,}5;10]$~s, $D\in[20;50]$, $K_q\in[10;50]$, $K\in[0{,}05;5]$~s$^{-1}$ \\
+$\theta_0$ & $H=3$~s, $D=25$, $K_q=20$, $K=1$~s$^{-1}$ en ambos GFM \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+R5 extrapola hasta $T_s$ la potencia que el banco entrega al final del horizonte: es la energía que exige
+sostener la respuesta primaria hasta el relevo del control secundario. En R8, $\Delta P_i^{disp}$ es la
+holgura de potencia de cada GFM sobre su punto previo (20~MW en S1; 10~MW para el GFM2 en S3), lo que equivale
+a $H\le4{,}1$~s y a $H_2\le2{,}0$~s en S3. En R9, $\alpha_i=\partial U_i/\partial E_i$ y
+$\beta_i=\partial q_i/\partial E_i$ linealizan el lazo Q--V, cuya constante de tiempo es
+$\tau_v=1/[K_i(K_{q,i}\alpha_i+\beta_i)]$.
+
+(P) es un problema de control óptimo con 9 decisiones y restricciones en un continuo de instantes
+(semi-infinito). Es no convexo: R1 es una igualdad no afín, con productos entre ganancias y estados
+($D_i\omega_i$, $K_iK_{q,i}U_i$), flujos trigonométricos y la raíz del banco. No tiene variables enteras porque
+el limitador se modeló con funciones suaves.
+
+\subsection{Supuestos y alcance}
+(i) Modelo RMS: es válido para la dinámica electromecánica de un escalón de carga, no para fallas; no hay
+prioridad P/Q ni soporte ante huecos de tensión. (ii) La SG no tiene regulador de tensión y su gobernador no
+tiene límites ni banda muerta. (iii) Las cargas son impedancias constantes y no dependen de la frecuencia: si
+la tensión baja, el consumo baja; este efecto se cuantifica en la Sección~\ref{sec:activas}. (iv) El lazo
+integral del limitador no tiene saturación superior; se verifica que $\rho_i\ll p_i^0$. (v) El estatismo del
+GFM2 se expresa en la base del inversor (60~MVA), tres veces la potencia de su BESS. (vi) Los datos de línea
+de~\cite{Kumari2021} tienen una razón $R/X$ alta para 230~kV.
+
+\section{Formulaciones y métodos de solución}
+
+\textbf{Dos modelos de los límites sostenidos.} En el \emph{modo R}, (P) se resuelve tal como está escrito, con
+$\rho_i\equiv0$: las restricciones $|p_{b,i}|\le1$, $\vartheta_i(T)\le B$ e $i_i(T)\le I_c$ impiden que el
+limitador llegue a actuar. En el \emph{modo L} esas tres restricciones se eliminan y \eqref{eq:lim} forma
+parte de la dinámica; se conservan los límites de pico del equipo ($I_{max}$, corriente y tensión del banco).
+Los modos no son equivalentes: en L el banco puede exceder su potencia nominal de forma transitoria, hasta
+donde lo permite su corriente máxima (1,2~pu), mientras el limitador la devuelve al valor nominal. La
+diferencia entre ambos mide el valor de usar esa sobrecarga transitoria.
+
+Todas las formulaciones imponen las restricciones de trayectoria en una malla no uniforme de 660 intervalos
+(25~ms hasta 3~s y 50~ms hasta $T$) e integran \eqref{eq:obj} por trapecios.
+
+\textbf{Secuenciales (caja negra).} Un integrador de Julia (Rodas5P) entrega $\mb x(t_k;\theta)$ y cada
+restricción de trayectoria se reemplaza por su peor valor,
+$G_m(\theta)=\max_k g_m(\mb x(t_k;\theta))\le0$. \emph{F1} replica~\cite{Wang2024}: SQP sobre $(H,D)$ para
+minimizar $\Delta f_{max}$ sujeto a $\max_t p_i\le1$, y luego PSO sobre $(K_q,K)$ para minimizar pérdidas con
+penalización de tensión, sin R2--R9 y sin limitador. \emph{F2} resuelve (P) con SQP (SLSQP: Hessiano BFGS y
+gradientes por diferencias finitas). \emph{F3} minimiza con PSO~\cite{Kennedy1995} la función penalizada
+$J+10^4\sum_m\max(0,G_m)^2$ (24 partículas, 250 iteraciones).
+
+\textbf{Simultáneos (transcripción directa).} Los estados en la malla pasan a ser variables y la dinámica se
+impone con igualdades, por lo que cada restricción de trayectoria es una desigualdad suave por nodo y las
+derivadas son exactas (CasADi~\cite{Andersson2019}). El NLP se resuelve con IPOPT~\cite{Wachter2006}.
+\emph{F4}, colocación trapezoidal~\cite{Biegler2010}, tiene 14\,529 variables y 30\,394 restricciones;
+\emph{F4b} reemplaza el Hessiano exacto por L-BFGS. \emph{F5}, disparo múltiple~\cite{Geng2014,Gan2000}, deja
+como variables los estados al inicio de 66 intervalos (1\,461 variables) e integra cada uno con 10 pasos de
+RK4.
+
+\textbf{Una sintonía para varios escenarios.} Con un único $\theta$ para S1--S3 se comparan tres criterios:
+el peor caso $\min_\theta\max_sJ_s$ (epígrafe), el valor esperado $\min_\theta\sum_s\pi_sJ_s$ y el
+CVaR~\cite{Rockafellar2000} con $\alpha=0{,}8$,
+$\min_{\theta,\eta,z}\ \eta+\tfrac{1}{1-\alpha}\sum_s\pi_sz_s$ s.a.\ $z_s\ge J_s-\eta$, $z_s\ge0$. Ninguno de
+los tres es un problema de dos etapas, porque no hay decisiones posteriores a la realización de la
+incertidumbre: las trayectorias quedan determinadas por $\theta$. Para tener recurso se usa una regla de
+decisión afín~\cite{BenTal2004}, $\theta(\xi)=\theta^0+\xi\,\Delta\theta$, donde $\xi=(45-P_{fv})/10$ es la
+FV disponible, que el operador conoce antes del evento; las restricciones se exigen con $\theta(\xi_s)$ en
+cada escenario.
+
+\textbf{Certificado.} Cada sintonía se linealiza en el equilibrio posterior al escalón de cada escenario,
+$\dot{\mb z}=A_s\mb z$. Con autovalores se verifica el amortiguamiento mínimo de 5~\% que pide la NTSyCS. Con
+programación semidefinida~\cite{Boyd1994,Chilali1996} se busca una única $P\succ0$ tal que
+$A_s^\top P+PA_s+2\gamma P\preceq0$ para los tres escenarios: una función de Lyapunov común, que certifica la
+tasa de decaimiento $\gamma$ para cualquier combinación convexa de las $A_s$, algo que los autovalores de cada
+$A_s$ no garantizan.
+
+\textbf{Protocolo.} Todos los métodos parten de los mismos 20 puntos: $\theta_0$ y 19 puntos de un hipercubo
+latino en las cotas. Cada iterado se reevalúa con el modelo de Julia y con todas las restricciones de (P); una
+sintonía es factible si su violación relativa es menor que $10^{-3}$. Los tiempos son de reloj con cinco
+procesos simultáneos en un computador de 6 núcleos, por lo que son comparables entre métodos, no absolutos.
+
+\section{Experimentos computacionales}
+
+\subsection{Comparación con el artículo base (P1)}
+\PEND{Tabla de sintonías: $\theta_0$, F1, óptimo R, óptimo L, robustas; se genera con python/resumen.py en
+tablas/sintonias.tex.}
+
+\begin{table*}[t]
+\centering
+\caption{Sintonías comparadas en S1, validadas con el modelo de Julia. Viol.: violación relativa máxima de (P);
+$\zeta$: amortiguamiento mínimo en S1--S3}
+\label{tab:sint}
+\input{tablas/sintonias}
+\end{table*}
+
+La Tabla~\ref{tab:abl} parte de la formulación del artículo y agrega un grupo de restricciones a la vez, con
+el mismo objetivo, el mismo modelo y los mismos puntos iniciales, de modo que cada cambio de la sintonía se
+atribuye a una restricción. \PEND{lectura de la ablación.}
+
+\begin{table}[t]
+\centering
+\caption{Ablación en S1 (modo R): se agrega un grupo de restricciones a la vez. Viol.\ (P): violación del problema completo}
+\label{tab:abl}
+\resizebox{\columnwidth}{!}{\input{tablas/ablacion}}
+\end{table}
+
+\subsection{Restricciones frente a limitador}
+\PEND{Comparación R frente a L: $J$, $\Delta f_{max}$, qué variables quedan en cotas, $\rho$ máximo,
+comportamiento a 300~s.}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{trayectorias_final}
+\caption{Respuesta a S1 con el limitador activo en la simulación: frecuencia de la SG, corriente del GFM1 y
+potencia del BESS1.}
+\label{fig:tray}
+\end{figure}
+
+\subsection{Restricciones activas, multiplicadores y pesos (P3)}\label{sec:activas}
+En el óptimo del modo R, $H_1=2{,}90$~s, $H_2=4{,}10$~s, $D_1=27{,}8$ y $D_2=23{,}3$ quedan en el interior de
+sus cotas. Las restricciones activas son la potencia máxima del BESS1 (R4), la energía de servicio del BESS2
+(R5), la inercia efectiva del GFM2 (R8) y la rapidez mínima del lazo Q--V (R9). Sólo $K_{q,1}$ y $K_{q,2}$
+quedan en una cota, la inferior. \PEND{multiplicadores; barrido de reserva; sensibilidad a pesos; $K_q$ fijo
+y alivio de carga.}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{barridos_final}
+\caption{Izquierda: $J^\star$ frente a la energía reservada y pendiente que predice el multiplicador.
+Derecha: $\Delta f_{max}$ óptima frente al tamaño del escalón, en los modos R y L.}
+\label{fig:barr}
+\end{figure}
+
+\subsection{Convergencia de los métodos (P2)}
+Con SQP de caja negra (F2), los 20 puntos iniciales terminan en tres cuencas factibles: $J=0{,}6316$ (7 de
+20), $0{,}6615$ (3 de 20) y $0{,}6754$ (9 de 20); una corrida se detiene antes, en $0{,}6350$. El problema
+tiene, por tanto, varios óptimos locales, como cabe esperar de un problema no convexo, y un solo arranque
+alcanza el mejor valor con probabilidad cercana a un tercio. \PEND{Tabla de convergencia y lectura.}
+
+\begin{table}[t]
+\centering
+\caption{Convergencia en S1, modo R, desde los mismos puntos iniciales. Mejor: corridas factibles a menos de
+0,1~\% del mejor $J$ conocido; $t$: mediana del tiempo de reloj}
+\label{tab:conv}
+\resizebox{\columnwidth}{!}{\input{tablas/convergencia}}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{convergencia_final}
+\caption{Fracción de corridas que alcanza un iterado factible a menos de 1~\% del mejor $J$, en función del
+tiempo.}
+\label{fig:conv}
+\end{figure}
+
+\subsection{Robustez y validación fuera de muestra (P4)}
+\PEND{Tabla y lectura de robustez.}
+
+\begin{table}[t]
+\centering
+\caption{Una sintonía para S1--S3. Fuera de muestra: 500 escenarios aleatorios (barra, $\Delta P$ de 20 a
+50~MW, SOC y FV)}
+\label{tab:rob}
+\resizebox{\columnwidth}{!}{\input{tablas/robusto}}
+\end{table}
+
+\subsection{Validación de la implementación}
+\PEND{Refinamiento de malla; malla densa de 1~ms; horizonte de 300~s; escalón de tensión; Lyapunov común.}
+
+\section{Conclusión}
+\PEND{Conclusiones por pregunta P1--P4, limitaciones y trabajo futuro.}
+
+\section*{Distribución del trabajo}
+\textbf{T.~Avendaño:} revisión bibliográfica y normativa, modelo y limitador. \textbf{J.~Errázuriz:} métodos de
+caja negra y análisis de convergencia. \textbf{J.~Milling:} modelo dinámico, restricciones y validación.
+\textbf{M.~Zañartu:} optimización dinámica y certificados. \textbf{X.~Zuloaga:} formulaciones con
+incertidumbre y análisis de escenarios. Todos participaron en la interpretación y la redacción.
+
+\bibliographystyle{IEEEtran}
+\bibliography{referencias}
+
+\end{document}
+
+exec
+/usr/bin/zsh -lc 'cat Codigos_final/python/graficar.py Codigos_final/python/resumen.py' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 109ms:
+# Figuras del informe a partir de los CSV de resultados
+
+import sys
+from pathlib import Path
+
+import matplotlib
+import numpy as np
+import pandas as pd
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+
+R = Path(__file__).resolve().parents[1] / "resultados"
+SAL = Path(sys.argv[1]) if len(sys.argv) > 1 else R / "figuras"
+SAL.mkdir(parents=True, exist_ok=True)
+SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"]
+plt.rcParams.update({"font.size": 7, "axes.edgecolor": "#8a8984", "axes.labelcolor": "#0b0b0b",
+                     "xtick.color": "#52514e", "ytick.color": "#52514e", "axes.grid": True,
+                     "grid.color": "#e4e3df", "grid.linewidth": 0.5, "axes.spines.top": False,
+                     "axes.spines.right": False, "lines.linewidth": 1.4, "legend.frameon": False,
+                     "savefig.bbox": "tight", "font.family": "serif"})
+ETIQ = {"F1_paper_SQP+PSO": "F1 paper (SQP+PSO)", "F2_SQP_cajanegra": "F2 SQP caja negra",
+        "F3_PSO_penalizado": "F3 PSO penalizado", "F4_colocacion_exacta": "F4 colocación (Hess. exacto)",
+        "F4b_colocacion_LBFGS": "F4b colocación (L-BFGS)", "F5_disparo_multiple": "F5 disparo múltiple"}
+
+# Analizamos convergencia buscando el mejor J factible vs tiempo en S1
+conv = pd.read_csv(R / "convergencia.csv")
+res = pd.read_csv(R / "resumen_corridas.csv")
+J_ref = res[(res.escenario == "S1_carga_b5") & res.factible_real]["J_real"].min()
+fig, ax = plt.subplots(figsize=(3.5, 2.9))
+for k, (f, et) in enumerate(ETIQ.items()):
+    r = res[(res.formulacion == f)]
+    if r.empty:
+        continue
+    mejor = r.sort_values(["factible_real", "J_real"], ascending=[False, True]).iloc[0]["corrida"]
+    g = conv[(conv.formulacion == f) & (conv.corrida == mejor)].copy()
+    g["J_fact"] = np.where(g.factible_real, g.J_real, np.inf)
+    g["brecha"] = (g["J_fact"].cummin() - J_ref) / J_ref
+    g = g[np.isfinite(g.brecha)]
+    if g.empty:                       
+        continue
+    ax.step(g.t_s.clip(lower=0.05), g.brecha.clip(lower=1e-5), where="post", color=SERIES[k], label=et)
+ax.set_xscale("log")
+ax.set_yscale("log")
+ax.set_xlabel("Tiempo de cómputo [s]")
+ax.set_ylabel(r"Brecha $(J-J^\star)/J^\star$ (mejor factible)")
+ax.legend(fontsize=6, loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=2)
+fig.savefig(SAL / "convergencia.pdf")
+
+# Vemos las trayectorias validadas en Julia como la inicial, paper (F1) y colocación (F4)
+
+tr = pd.read_csv(R / "trayectorias.csv")
+casos = [("Inicial", "θ inicial"), ("F1_paper_SQP+PSO", "F1 paper"), ("F4_colocacion_exacta", "F4 propuesta")]
+fig, axs = plt.subplots(2, 2, figsize=(3.5, 2.9), sharex=True)
+paneles = [("fmin", r"$f_{min}$ [Hz]"), ("I2", r"$|i_2|$ GFM2 [pu]"),
+           ("pb2", r"$p_{b,2}$ BESS2 [pu]"), ("V5", r"$|V_5|$ [pu]")]
+for k, (f, et) in enumerate(casos):
+    g = tr[tr.formulacion == f].copy()
+    if g.empty:
+        continue
+    g["fmin"] = g[["f_sg", "f1", "f2"]].min(axis=1)
+    for ax, (col, yl) in zip(axs.flat, paneles):
+        ax.plot(g.t, g[col], color=SERIES[k], label=et)
+        ax.set_ylabel(yl)
+axs[0, 1].axhline(1.0, color="#52514e", lw=0.8, ls=":")
+axs[0, 1].axvline(5.0, color="#52514e", lw=0.8, ls=":")
+axs[1, 0].axhline(1.0, color="#52514e", lw=0.8, ls="--")
+for ax in axs[1]:
+    ax.set_xlabel("t [s]")
+fig.legend(*axs[0, 0].get_legend_handles_labels(), loc="upper center", ncol=3, fontsize=6,
+           bbox_to_anchor=(0.5, 1.04))
+fig.tight_layout(h_pad=0.4, w_pad=0.6)
+fig.savefig(SAL / "trayectorias.pdf")
+
+# Hacemos un barrido de energía reservada del BESS2: J* y multiplicador.
+# En barrido_corriente.csv J* es constante asumiendo que I_max no es activa
+be = pd.read_csv(R / "barrido_energia.csv")
+ok = be.estado == "Solve_Succeeded"
+fig, axs = plt.subplots(1, 2, figsize=(3.5, 1.5))
+axs[0].plot(be.E2_res_MWs[ok], be.J[ok], "o-", color=SERIES[0], ms=4)
+axs[0].set_ylabel(r"$J^\star$")
+axs[1].plot(be.E2_res_MWs[ok], be.lam_E2[ok] + be.lam_H2S2_le_E2[ok], "o-", color=SERIES[1], ms=4)
+axs[1].set_ylabel(r"$\lambda_E$ [1/MWs]")
+for ax in axs:
+    ax.set_xlabel(r"$E^{res}_2$ [MWs]")
+fig.tight_layout(w_pad=0.8)
+fig.savefig(SAL / "barridos.pdf")
+print("Figuras en", SAL)
+# Cpdigo dedicado a imprimir las tablas resumen a partir de resultados/*.csv.
+
+
+from pathlib import Path
+
+import pandas as pd
+
+R = Path(__file__).resolve().parents[1] / "resultados"
+res = pd.read_csv(R / "resumen_corridas.csv")
+val = pd.read_csv(R / "validacion.csv")
+s1 = res[res.escenario == "S1_carga_b5"]
+
+print("% Tabla de convergencia (S1): mediana sobre corridas")
+for f, g in s1.groupby("formulacion", sort=False):
+    n_ok = ((g.brecha_rel_final <= 1e-2) & g.factible_real).sum()
+    ev = g["n_eval"].median() if "n_eval" in g and g["n_eval"].notna().any() else float("nan")
+    print(f"{f} & {len(g)} & {g.t_total_s.median():.1f} & {g.iteraciones.median():.0f} & {ev:.0f} & "
+          f"{g.J_real.min():.4f} & {g.viol_real.min():.3f} & {g['t_al_1pct_s'].median():.1f} & {n_ok}/{len(g)} \\\\")
+
+print("\n% Óptimos validados (escenario de diseño)")
+v = val[val.esc_diseno == val.esc_eval]
+th = pd.read_csv(R / "optimos.csv")
+for _, r in th.iterrows():
+    x = v[v.formulacion == r.formulacion].iloc[0]
+    print(f"{r.formulacion} & {r.H1:.2f} & {r.H2:.2f} & {r.D1:.1f} & {r.D2:.1f} & {r.Kq1:.1f} & {r.Kq2:.1f} & "
+          f"{r.K1:.2f} & {r.K2:.2f} & {x.J:.4f} & {x.nadir_Hz:.3f} & {x.I2_pico:.3f} & {x.max_violacion:.3f} \\\\")
+
+print("\n% Restricciones activas (|g| < 1e-3) por óptimo")
+gcols = list(val.columns[val.columns.get_loc("I1_max"):val.columns.get_loc("max_violacion")])
+for _, x in v.iterrows():
+    act = [c for c in gcols if x[c] > -1e-3]
+    print(x.formulacion, x.esc_eval, act)
+
+print("\n% Robustez: J de cada óptimo en cada escenario")
+print(val.pivot_table(index="formulacion", columns="esc_eval", values="J").round(4).to_string())
+print(val.pivot_table(index="formulacion", columns="esc_eval", values="max_violacion").round(4).to_string())
+
+for f in ("barrido_energia.csv", "barrido_corriente.csv"):
+    print("\n%", f)
+    print(pd.read_csv(R / f).round(5).to_string())
+
+print("\n% Certificados SDP")
+print(pd.read_csv(R / "certificados.csv").round(4).to_string())
+
+exec
+/usr/bin/zsh -lc 'pwd; rg --files Codigos_final/resultados Informe | head -100' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+/home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+Codigos_final/resultados/corridas_F3.csv
+Codigos_final/resultados/conv_F3.csv
+Codigos_final/resultados/corridas_F1.csv
+Codigos_final/resultados/conv_F1.csv
+Codigos_final/resultados/corridas_F4b.csv
+Codigos_final/resultados/conv_F4b.csv
+Codigos_final/resultados/logs/codex_tarea1.log
+Codigos_final/resultados/logs/modosn6.log
+Codigos_final/resultados/logs/convmetodoF4bn4.log
+Codigos_final/resultados/logs/convmetodoF2n20.log
+Codigos_final/resultados/logs/convmetodoF1n10.log
+Codigos_final/resultados/logs/convmetodoF3n20.log
+Codigos_final/resultados/logs/convmetodoF5n10.log
+Codigos_final/resultados/logs/convmetodoF4n20.log
+Codigos_final/resultados/logs/todo.out
+Codigos_final/resultados/corridas_F2.csv
+Codigos_final/resultados/conv_F2.csv
+Informe/informe_final.tex
+Informe/main.pdf
+Informe/referencias.bib
+Informe/main.tex
+Informe/figuras/trayectorias.pdf
+Informe/figuras/diagrama_5barras.tex
+Informe/Informe_1.tex
+Informe/IEEEtran.cls
+Informe/IEEEtran.bst
+
+codex
+🤖 Implementación · 🧠 GPT-6 · ⛓️ Agente único · 🛠️ Sin skills adicionales
+
+La tarea exige generar salidas aunque falten experimentos. Reescribiré ambos scripts, conservaré el estilo de las figuras y crearé PDF con «pendiente» donde falten datos, para poder compilar el informe. No tocaré los procesos de experimentación.
+
+exec
+/usr/bin/zsh -lc 'graphify query "CSV resultados figuras tablas informe final" --budget 1200' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 476ms:
+Graph: graphify-out/graph.json (291 nodes) | Traversal: BFS depth=2 | Start: ['Figuras y tablas: graficar.py (convergencia/trayectorias/barridos.pdf) y resumen.py (tablas LaTeX)', 'Resultados CSV: convergencia, resumen_corridas, optimos, validacion, trayectorias, barridos, certificados', 'Informe de avance: Sintonía óptima de inversores grid-forming con límites de corriente, almacenamiento e inercia', 'Validación validar.jl: cada óptimo en S1, S2, S3 → validacion.csv, trayectorias.csv', 'Requisitos Informe final (<=8 pags)'] | 97 nodes found
+
+[!] TRUNCATED: showing 22 of 97 nodes (~1200-token budget). The answer may be among the 75 cut nodes — raise the token budget (CLI: --budget) or narrow the query (e.g. context_filter=['call'], or get_node for a specific symbol).
+
+NODE Figuras y tablas: graficar.py (convergencia/trayectorias/barridos.pdf) y resumen.py (tablas LaTeX) [src=Codigos_NUEVOS/Flujo del código GFM.html loc=None community=Pipeline (explicador HTML)]
+NODE Resultados CSV: convergencia, resumen_corridas, optimos, validacion, trayectorias, barridos, certificados [src=Codigos_NUEVOS/README.md loc=None community=Pipeline (explicador HTML)]
+NODE Informe de avance: Sintonía óptima de inversores grid-forming con límites de corriente, almacenamiento e inercia [src=Informe/main.pdf loc=None community=Arquitectura (README)]
+NODE Validación validar.jl: cada óptimo en S1, S2, S3 → validacion.csv, trayectorias.csv [src=Codigos_NUEVOS/Flujo del código GFM.html loc=None community=Pipeline (explicador HTML)]
+NODE Requisitos Informe final (<=8 pags) [src=Proyecto_Optimización_Avanzada.pdf loc=None community=Paper base y presentación]
+NODE Flujo del código GFM (explicador del pipeline) [src=Codigos_NUEVOS/Flujo del código GFM.html loc=None community=Pipeline (explicador HTML)]
+NODE Problema (P): sintonía de VSG GFM como optimización dinámica [src=Informe/main.pdf loc=Sec. II-D community=Problema (P) y restricciones R1-R10]
+NODE README: Sintonía óptima de inversores GFM en un sistema de 5 barras [src=Codigos_NUEVOS/README.md loc=None community=Arquitectura (README)]
+NODE Tabla III: convergencia en S1 (F2 0,8 s 4/5; F3 21,3 s 1/3; F4 23,6 s 2/5; F4b 150,8 s 1/2; F5 45,0 s 4/5) [src=Informe/main.pdf loc=Tabla III community=Pipeline (explicador HTML)]
+NODE Tabla II: comparación de sintonías θ0, F1, θ*, θR (validado en Julia, S1) [src=Informe/main.pdf loc=Tabla II community=Pipeline (explicador HTML)]
+NODE Post-proceso real(): J_real y viol_real de cada iterado, tiempos al 1 % y 0,1 % [src=Codigos_NUEVOS/Flujo del código GFM.html loc=None community=Pipeline (explicador HTML)]
+NODE Distribución del trabajo entre los 5 integrantes [src=Informe/main.pdf loc=Sec. VI community=Arquitectura (README)]
+NODE Certificados certificado.py: linealización (11 estados AC) y bisección LMI para α y ζ [src=Codigos_NUEVOS/Flujo del código GFM.html loc=None community=Pipeline (explicador HTML)]
+NODE She et al. 2024 - Controller design for inverter-based microgrids with certified large-signal stability [src=Informe/main.pdf loc=Ref. [5] community=Arquitectura (README)]
+NODE Preguntas de investigación P1-P4 [src=Informe/main.pdf loc=Sec. I community=Pipeline (explicador HTML)]
+NODE Precio sombra de la energía reservada del BESS2 (multiplicador R8 ≈ 3e-5 por MWs) [src=Informe/main.pdf loc=Sec. IV community=Pipeline (explicador HTML)]
+NODE Buire et al. 2026 - Tuning GFM converters for virtual inertia and damping allocation [src=Informe/main.pdf loc=Ref. [4] community=Literatura y conceptos del curso]
+NODE CNE 2026 - Norma Técnica de Seguridad y Calidad de Servicio (NTSyCS) [src=Informe/main.pdf loc=Ref. [1] community=Problema (P) y restricciones R1-R10]
+NODE Cadena evaluar → simular (Rodas5P) → salidas → metricas (14 métricas, 19 g) [src=Codigos_NUEVOS/Flujo del código GFM.html loc=None community=Pipeline (explicador HTML)]
+NODE Trabajo futuro: IEEE 9/14 barras con perfiles SEN, limitador de corriente GFM, restricción de amortiguamiento por LMI, frente de Pareto por ε-restricción [src=Informe/main.pdf loc=Sec. V community=Arquitectura (README)]
+NODE Andersson et al. 2019 - CasADi [src=Informe/main.pdf loc=Ref. [10] community=Arquitectura (README)]
+NODE CNE 2026 - NTSyCS Anexo Técnico IBR (AT-IBR) [src=Informe/main.pdf loc=Ref. [2] community=Pipeline (explicador HTML)]
+... (truncated — 75 more nodes cut by ~1200-token budget. Narrow with context_filter=['call'] or use get_node for a specific symbol)
+
+exec
+/usr/bin/zsh -lc "sed -n '175,270p' Informe/informe_final.tex; head -c 1800 Codigos_final/resultados/corridas_F2.csv" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+\end{align}
+\end{subequations}
+Aquí $\rp{x}=\max(x,0)+\varepsilon\ln(1+e^{-|x|/\varepsilon})$ y $\sigma$ es la sigmoide logística. Estas
+funciones suaves evitan variables binarias o condiciones de complementariedad, y mantienen el modelo
+diferenciable. Reducir la consigna de potencia ante saturación es una de las estrategias documentadas
+en~\cite{Fan2022}; la forma I$^2$t del presupuesto es un supuesto propio. En compacto,
+$\dot{\mb x}=f(\mb x,\theta)$ con 22 estados. El estado inicial es el equilibrio previo, que no depende de
+$\theta$.
+
+\subsection{Problema de optimización}
+Las decisiones son $\theta=[H_1,H_2,D_1,D_2,K_{q,1},K_{q,2},K_1,K_2]$. El objetivo pondera la desviación
+máxima de frecuencia, la desviación de tensión y el aumento de pérdidas:
+\begin{align}
+J ={}& w_f\,\frac{z_f}{\Delta f_{ref}} + \frac{w_v}{5T}\!\int_0^T\!\sum_b\!\Big(\frac{V_b-V_b^0}{\Delta V_{ref}}\Big)^2\!dt
++ \frac{w_l}{T\Delta P}\!\int_0^T\!(p_{loss}-p_{loss}^0)\,dt. \label{eq:obj}
+\end{align}
+La desviación máxima $\Delta f_{max}=\max_{u,t}|f_u(t)-f_0|$ no es diferenciable y se reemplaza por la variable
+epígrafe $z_f$. El problema (P) es
+\begin{align}
+\min_{\theta,\,z_f}\;& J \quad \text{s.a.} \quad \dot{\mb{x}}=f(\mb{x},\theta),\;\mb{x}(0)=\mb{x}_0 \tag{R1}\\
+& |f_u(t)-f_0| \le z_f \le 1\,\text{Hz},\;\; |f_u(t)-f_u(t-0{,}5)| \le 1\,\text{Hz} \tag{R2}\\
+& i_i(t) \le I_{max},\;\; \vartheta_i(T)\le B,\;\; i_i(T)\le I_c \tag{R3}\\
+& |i_{b,i}|\le 1{,}2,\; v_{b,i}\ge 0{,}85,\; |p_{b,i}|\le1,\; SOC_i\in[0{,}1;0{,}9] \tag{R4}\\
+& e_i(T) + (T_s-T)\big(p_{b,i}(T)-p_{b,i}^0\big)P^n_i \le E_i^{res} \tag{R5}\\
+& 0{,}93 \le V_b(t) \le 1{,}07 \tag{R6}\\
+& \textstyle\sum_i H_iS_i \ge 205\ \text{MWs} \tag{R7}\\
+& 2H_iS_i\,\Delta f_{max}^{lim}/f_0 \le E_i^{res},\;\; 2H_iS_i\,\dot f^{lim}/f_0 \le \Delta P_i^{disp} \tag{R8}\\
+& 2{,}2 \le K_i(K_{q,i}\alpha_i+\beta_i) \le 1/(n\tau_q),\;\; \underline\theta \le \theta \le \overline\theta \tag{R9--10}
+\end{align}
+para toda unidad $u$, GFM $i$, barra $b$ y $t\in[0,T]$. La Tabla~\ref{tab:restr} indica el origen de cada
+restricción y la Tabla~\ref{tab:param}, los parámetros.
+
+\begin{table}[t]
+\centering
+\caption{Origen de las restricciones (N: texto de la norma; D: derivada de la norma; S: supuesto propio)}
+\label{tab:restr}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lll}
+\toprule
+ & Restricción & Origen \\
+\midrule
+R2 & $\Delta f\le1$~Hz; RoCoF $\le2$~Hz/s en 500~ms & N: NTSyCS 3-10 (soportabilidad) \\
+R3 & $i\le1{,}3$~pu & N: AT-IBR 3-1 d) (capacidad mínima) \\
+R3 & presupuesto $\vartheta\le B$; $i(T)\le1$~pu & S: I$^2$t; corriente nominal \\
+R4 & corriente, tensión, potencia y SOC del banco & S: datos del equipo \\
+R5 & energía de servicio a $T_s=300$~s $\le5$~\% & S: no hay plazo en la norma revisada \\
+R6 & banda 0,93--1,07~pu & N: NTSyCS 5-23 \\
+R7 & inercia del sistema $\ge625$~MWs & D: RoCoF con $\Delta P=50$~MW \\
+R8 & energía inercial $\le E^{res}$ & D: Hu \emph{et al.}~\cite{Hu2025} \\
+R8 & potencia inercial a 2~Hz/s $\le$ holgura & D: AT-IBR 7-6 k) \\
+R9 & tiempo de crecimiento $\le1$~s & N: AT-IBR 3-3 e) \\
+R9 & lazo Q--V 5 veces más lento que $\tau_q$ & S: validez del modelo de 1.$^{er}$ orden \\
+R10 & $D\in[20,50]$ (estatismo 2--5~\%) & N: AT-IBR 3-6 \\
+R10 & $K_q\in[10,50]$ & S: la norma no fija este rango \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{Parámetros (pu en base propia; valores GFM1/GFM2)}
+\label{tab:param}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{ll}
+\toprule
+SG & 120~MVA, $H_g=3{,}5$~s, $x'_d=0{,}25$, $D_g=1$, $R=0{,}05$, $T_G=0{,}2$~s, $T_R=7$~s, $F_H=0{,}3$ \\
+GFM & $S=60$~MVA, $X_f=0{,}15$, $\tau_q=20$~ms, $R_c=0{,}01$, $p^0=40/45$~MW, $p_{fv}=0/45$~MW \\
+Limitador & $I_{max}=1{,}3$, $I_c=1$, $B=3{,}45$~pu$^2$s, $k_\ell=2$~s$^{-1}$, $\tau_\ell=2$~s, $\varepsilon=0{,}01$, $a=0{,}02$ \\
+BESS & $P^n=60/20$~MW, $E_h=1$~h, $\mathrm{OCV}=0{,}9+0{,}2\,SOC$, $R_0=0{,}03$, $R_1=0{,}02$, $\tau_1=20$~s \\
+ & $SOC_0=0{,}5$, $\eta_c=0{,}97$, $E^{res}=10\,800/3\,600$~MWs (5~\%), $T_s=300$~s \\
+Lazo Q--V & $\alpha=0{,}352/0{,}389$, $\beta=4{,}36/4{,}04$, $n=5$ \\
+Objetivo & $T=30$~s, $w_f=w_v=1$, $w_l=0{,}1$, $\Delta f_{ref}=1$~Hz, $\Delta V_{ref}=0{,}05$~pu \\
+Cotas & $H\in[0{,}5;10]$~s, $D\in[20;50]$, $K_q\in[10;50]$, $K\in[0{,}05;5]$~s$^{-1}$ \\
+$\theta_0$ & $H=3$~s, $D=25$, $K_q=20$, $K=1$~s$^{-1}$ en ambos GFM \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+R5 extrapola hasta $T_s$ la potencia que el banco entrega al final del horizonte: es la energía que exige
+sostener la respuesta primaria hasta el relevo del control secundario. En R8, $\Delta P_i^{disp}$ es la
+holgura de potencia de cada GFM sobre su punto previo (20~MW en S1; 10~MW para el GFM2 en S3), lo que equivale
+a $H\le4{,}1$~s y a $H_2\le2{,}0$~s en S3. En R9, $\alpha_i=\partial U_i/\partial E_i$ y
+$\beta_i=\partial q_i/\partial E_i$ linealizan el lazo Q--V, cuya constante de tiempo es
+$\tau_v=1/[K_i(K_{q,i}\alpha_i+\beta_i)]$.
+
+(P) es un problema de control óptimo con 9 decisiones y restricciones en un continuo de instantes
+(semi-infinito). Es no convexo: R1 es una igualdad no afín, con productos entre ganancias y estados
+($D_i\omega_i$, $K_iK_{q,i}U_i$), flujos trigonométricos y la raíz del banco. No tiene variables enteras porque
+el limitador se modeló con funciones suaves.
+
+\subsection{Supuestos y alcance}
+(i) Modelo RMS: es válido para la dinámica electromecánica de un escalón de carga, no para fallas; no hay
+prioridad P/Q ni soporte ante huecos de tensión. (ii) La SG no tiene regulador de tensión y su gobernador no
+tiene límites ni banda muerta. (iii) Las cargas son impedancias constantes y no dependen de la frecuencia: si
+la tensión baja, el consumo baja; este efecto se cuantifica en la Sección~\ref{sec:activas}. (iv) El lazo
+integral del limitador no tiene saturación superior; se verifica que $\rho_i\ll p_i^0$. (v) El estatismo del
+formulacion,corrida,t_total_s,iteraciones,H1,H2,D1,D2,Kq1,Kq2,K1,K2,n_eval,t_solver_s,J_real,viol_real
+F2,0,56.40494743199997,166,2.907577534821812,4.076723751233617,27.806644480692846,23.332900879581576,10.028718451379001,10.000000000022522,0.2788489470660761,0.2774040625297889,2145,56.404951272999824,0.6317419266720466,1.6989036440277644e-11
+F2,1,106.13253198599887,200,0.8039143084677266,4.0976061205150405,26.443509051661138,20.596961731930264,10.00000000000001,10.000000000000039,0.27920631098886306,0.2774040625305606,3701,106.1325338709994,0.6754390809862436,6.167993620298517e-07
+F2,2,5.841310477999286,23,0.8034865127223999,4.097606120515046,26.443509008010384,20.597007894523696,10.000000000000666,10.000000000000986,0.27920631098895976,0.2774040625306416,229,5.841311943999244,0.6754400401063271,1.4450362700852396e-15
+F2,3,3.4563216820006346,13,2.8977921228567762,4.097606120515007,27.801598695544072,23.33312942189588,10.000000000000009,10.000000000000004,0.2792063109881233,0.2774040625305177,133,3.456323637999958,0.6316436833126402,6.499507598789478e-09
+F2,4,54.39533508099885,145,1.5230248650729443,1.893641795816148,26.04818209600419,22.76765182797766,10.00000000000144,10.000000009086111,0.2792063109808325,0.27740406324864314,2098,54.39533696699982,0.6615259724372435,1.6909974342192206e-09
+F2,5,2.372862566000549,13,1.5230248629569942,1.8936418037307816,26.048182156839484,22.76765184772048,10.000000000005883,10.000000000040835,0.279206310988641,0.2774040626067045,118,2.372863963000782,0.6615259717221369,1.0216612000846226e-09
+F2,6,3.2984232660001,13,0.8034865532091096,4.097606120514982,26.443509003759765,20.597007883656214,10.000000000009479,10.000000000006787,0.27920631098876014,0.27740406254163885,119,3.298425152001073,0.6754400401193951,4.397149311330395e-12
+F2,7,7.
+exec
+/usr/bin/zsh -lc "rg -n 'to_csv|dJ_drho|activas|multiplicadores|zeta_min|sintonia|formulacion' Codigos_final/python/ejecutar_experimentos.py Codigos_final/julia/validar.jl" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+Codigos_final/julia/validar.jl:2:# (columnas: sintonia, escenario, H1..K2 y la pendiente dH1..dK2 de la regla afín, cero si no aplica).
+Codigos_final/julia/validar.jl:23:    (nombre=String(v[col("sintonia")]), θ=parse.(Float64, v[[col(n) for n in nθ]]),
+Codigos_final/julia/validar.jl:34:    println(io, cs(["sintonia", "escenario", "lim", NOMBRES_M..., NOMBRES_G..., "max_violacion", "factible"]))
+Codigos_final/julia/validar.jl:43:    println(io, cs(["sintonia", "escenario", "viol_malla", "viol_densa", "restriccion_peor", "J_malla", "J_densa",
+Codigos_final/julia/validar.jl:60:    println(io, cs(["sintonia", "escenario", "f_30", "f_Ts", "I1_Ts", "I2_Ts", "pb1_Ts", "pb2_Ts", "th1_frac", "th2_frac",
+Codigos_final/julia/validar.jl:94:            cabt || (println(io, cs(["sintonia", "lim", string.(keys(r))...])); cabt = true)
+Codigos_final/julia/validar.jl:106:    println(io, cs(["sintonia", "muestra", "barra", "dP", "SOC1", "SOC2", "P_fv2", "J", "dfmax_Hz", "max_violacion",
+Codigos_final/julia/validar.jl:123:    println(io, cs(["sintonia", "gfm", "t_reaccion_s", "t_crecimiento_s", "t_establecimiento_s", "sobreoscilacion_pct"]))
+Codigos_final/python/ejecutar_experimentos.py:8:  barridos     energía reservada (continuación + multiplicadores) y tamaño de la contingencia
+Codigos_final/python/ejecutar_experimentos.py:62:def activas(prob, z, s=0):
+Codigos_final/python/ejecutar_experimentos.py:63:    """Nombres de las restricciones activas (|g| < 2e-3) de la sintonía z en el escenario s."""
+Codigos_final/python/ejecutar_experimentos.py:78:def fila_sintonia(prob, z, s=0, **extra):
+Codigos_final/python/ejecutar_experimentos.py:84:            "activas": activas(prob, z, s)}
+Codigos_final/python/ejecutar_experimentos.py:89:    """Todas las formulaciones resuelven el mismo problema (S1, modo R) desde los mismos puntos iniciales.
+Codigos_final/python/ejecutar_experimentos.py:110:            corr.append(pd.DataFrame([{"formulacion": met, "corrida": k, "t_total_s": t_total,
+Codigos_final/python/ejecutar_experimentos.py:113:            pd.concat(conv).to_csv(f_conv, index=False)
+Codigos_final/python/ejecutar_experimentos.py:114:            pd.concat(corr).to_csv(f_corr, index=False)
+Codigos_final/python/ejecutar_experimentos.py:153:            filas.append(fila_sintonia(pr, mejor["z"], modo=modo, metodo="F2", n_factibles=len(Js),
+Codigos_final/python/ejecutar_experimentos.py:159:            filas.append(fila_sintonia(pr, z, modo=modo, metodo="F4", estado=r["estado"], t_s=r["t_s"],
+Codigos_final/python/ejecutar_experimentos.py:165:    pd.DataFrame(filas).to_csv(R / "modos.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:184:            f = fila_sintonia(pr, mejor["z"], caso=nombre)
+Codigos_final/python/ejecutar_experimentos.py:187:    pd.DataFrame(filas).to_csv(R / "ablacion.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:199:            filas.append(fila_sintonia(pr, mejor["z"], caso="pesos", wv=wv, wl=wl))
+Codigos_final/python/ejecutar_experimentos.py:200:            pd.DataFrame(filas).to_csv(R / "pesos.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:207:            filas.append(fila_sintonia(pr, mejor["z"], caso="Kq_fijo", wv=o["wv"], wl=o["wl"], Kq_fijo=kq))
+Codigos_final/python/ejecutar_experimentos.py:208:            pd.DataFrame(filas).to_csv(R / "pesos.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:219:        # colocación desde esa solución, que entrega los multiplicadores. El multiplicador se contrasta con la
+Codigos_final/python/ejecutar_experimentos.py:233:            filas.append(fila_sintonia(pr, pr.z_de(base["th"]), barrido="reserva", valor=rho, estado=base["estado"],
+Codigos_final/python/ejecutar_experimentos.py:235:                                       dJ_drho_multiplicador=pred,
+Codigos_final/python/ejecutar_experimentos.py:236:                                       dJ_drho_diferencias=(Jc[1]["J"] - Jc[0]["J"]) / (0.1 * rho) if ok else np.nan))
+Codigos_final/python/ejecutar_experimentos.py:238:                f"{filas[-1]['dJ_drho_diferencias']:.4f}")
+Codigos_final/python/ejecutar_experimentos.py:239:            pd.DataFrame(filas).to_csv(R / "barridos.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:249:                filas.append(fila_sintonia(pr, mejor["z"], barrido=f"dP_{modo}", valor=dP))
+Codigos_final/python/ejecutar_experimentos.py:250:                pd.DataFrame(filas).to_csv(R / "barridos.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:264:            filas.append(fila_sintonia(pr, mejor["z"], sintonia=f"opt_{e['nombre']}", criterio="un escenario"))
+Codigos_final/python/ejecutar_experimentos.py:274:            f = fila_sintonia(pr, z, sintonia=nombre, criterio=nombre, J_S1=Js[0], J_S2=Js[1], J_S3=Js[2],
+Codigos_final/python/ejecutar_experimentos.py:279:                f["activas"] = " | ".join(activas(pr, z, s) for s in (0, 2))
+Codigos_final/python/ejecutar_experimentos.py:282:            pd.DataFrame(filas).to_csv(R / "robusto.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:285:        th_mm = next(f for f in filas if f["sintonia"] == "minmax")
+Codigos_final/python/ejecutar_experimentos.py:292:        filas.append(fila_sintonia(pr, z, sintonia="minmax_F4", criterio="minmax", J_S1=Js[0], J_S2=Js[1],
+Codigos_final/python/ejecutar_experimentos.py:296:    pd.DataFrame(filas).to_csv(R / "robusto.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:315:            pd.DataFrame(filas).to_csv(R / "malla.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:320:    filas = [{"sintonia": "inicial", "escenario": esc[0]["nombre"],
+Codigos_final/python/ejecutar_experimentos.py:323:    filas.append({"sintonia": "F1_articulo", "escenario": esc[0]["nombre"], **{n: f1[n] for n in TH}})
+Codigos_final/python/ejecutar_experimentos.py:327:        filas.append({"sintonia": nombre, "escenario": esc[0]["nombre"], **{n: f[n] for n in TH}})
+Codigos_final/python/ejecutar_experimentos.py:330:        f = rob[rob.sintonia == s].iloc[0]
+Codigos_final/python/ejecutar_experimentos.py:331:        filas.append({"sintonia": s, "escenario": esc[0]["nombre"], **{n: f[n] for n in TH},
+Codigos_final/python/ejecutar_experimentos.py:337:    df.fillna(0.0).to_csv(R / "optimos.csv", index=False)
+Codigos_final/python/ejecutar_experimentos.py:347:        As, fila = [], {"sintonia": r.sintonia}
+Codigos_final/python/ejecutar_experimentos.py:357:        fila["zeta_min"] = min(fila[f"zeta_{e['nombre']}"] for e in esc)
+Codigos_final/python/ejecutar_experimentos.py:362:        log(f"{r.sintonia}: ζ mín = {fila['zeta_min']:.3f}, α común (SDP) = {fila['alpha_LMI_comun']:.4f}, "
+Codigos_final/python/ejecutar_experimentos.py:364:    pd.DataFrame(filas).to_csv(R / "certificados.csv", index=False)
+
+exec
+/usr/bin/zsh -lc 'git status --short; for f in Codigos_final/resultados/conv_F*.csv Codigos_final/resultados/corridas_F*.csv; do head -n 2 "$f"; done' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 10ms:
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+formulacion,corrida,escenario,iter,t_s,n_eval,J_modelo,viol_modelo,H1,H2,D1,D2,Kq1,Kq2,K1,K2,J_real,viol_real
+F1,0,S1_carga_b5,0,0.3356416499999568,1,0.6043141490024695,0.08535821661266252,3.0,3.0,25.0,25.0,20.0,20.0,1.0,1.0,0.6424510087729202,0.8269158965922927
+formulacion,corrida,escenario,iter,t_s,n_eval,J_modelo,viol_modelo,H1,H2,D1,D2,Kq1,Kq2,K1,K2,J_real,viol_real
+F2,0,S1_carga_b5,0,0.3336874289998377,1,0.6424510087729202,0.8269158965922927,3.0,3.0,25.0,25.0,20.0,20.0,1.0,1.0,0.6424510087729202,0.8269158965922927
+formulacion,corrida,escenario,iter,t_s,n_eval,J_modelo,viol_modelo,H1,H2,D1,D2,Kq1,Kq2,K1,K2,J_real,viol_real
+F3,0,S1_carga_b5,0,1.5344914369999287,47,0.6424510087729202,0.8269158965922927,3.0,3.0,25.0,25.0,20.0,20.0,1.0,1.0,0.6424510087729202,0.8269158965922927
+formulacion,corrida,escenario,iter,t_s,n_eval,J_modelo,viol_modelo,H1,H2,D1,D2,Kq1,Kq2,K1,K2,J_real,viol_real
+F4b,0,S1_carga_b5,0,2.500953541000854,,0.6424506094302685,399.83174443852204,3.0,3.0,25.0,25.0,20.0,20.0,1.0,1.0,0.6424510087729202,0.8269158965922927
+formulacion,corrida,t_total_s,iteraciones,H1,H2,D1,D2,Kq1,Kq2,K1,K2,n_eval,t_solver_s,J_real,viol_real
+F1,0,43.554512158999955,1100,7.492825997960989,6.3436063745527145,24.884552366534734,20.000000091677645,10.0,10.0,0.05,0.05,1433,43.55451739699993,0.6563382669391483,0.8222631760894665
+formulacion,corrida,t_total_s,iteraciones,H1,H2,D1,D2,Kq1,Kq2,K1,K2,n_eval,t_solver_s,J_real,viol_real
+F2,0,56.40494743199997,166,2.907577534821812,4.076723751233617,27.806644480692846,23.332900879581576,10.028718451379001,10.000000000022522,0.2788489470660761,0.2774040625297889,2145,56.404951272999824,0.6317419266720466,1.6989036440277644e-11
+formulacion,corrida,t_total_s,iteraciones,H1,H2,D1,D2,Kq1,Kq2,K1,K2,n_eval,t_solver_s,J_real,viol_real
+F3,0,185.81922144299995,249,4.1114924239371655,4.0949746834133816,20.0,20.0,12.0331965976596,39.878853290359125,0.7983095749343607,0.11255525581289533,6022,185.81922535399997,0.7310429067626881,0.0
+formulacion,corrida,t_total_s,iteraciones,H1,H2,D1,D2,Kq1,Kq2,K1,K2,t_solver_s,t_inicial_s,t_construccion_s,n_var,n_res,estado,exito,J_modelo,J_real,viol_real
+F4b,0,619.6186840739992,500,3.4093206790979855,3.432399532651338,20.039257554545905,20.76334173866039,10.082505397691047,10.12514047378737,0.3917797536587099,0.2757123318713649,619.5871623040002,0.031521769999017124,6.6712159190010425,14529,30394,Maximum_Iterations_Exceeded,False,0.7320638583334109,0.7319209663756343,0.0
+
+exec
+/usr/bin/zsh -lc "sed -n '135,167p' Codigos_final/python/ejecutar_experimentos.py; sed -n '100,122p' Codigos_final/julia/validar.jl" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+                if k in hechas:
+                    continue
+                h = Historial(met, k, e0)
+                r = P.resolver(th0, h)
+                cerrar(h, k, r["th"], r["t_inicial_s"] + r["t_s"], t_solver_s=r["t_s"], t_inicial_s=r["t_inicial_s"],
+                       t_construccion_s=r["t_construccion_s"], n_var=r["n_var"], n_res=r["n_res"],
+                       estado=r["estado"], exito=r["exito"], J_modelo=r["J"])
+
+
+# ============================================================ restricciones frente a limitador
+def exp_modos():
+    ths = datos.puntos_iniciales(p, 20)[:args.n]
+    filas = []
+    with OraculoJulia() as orac:
+        for modo in ("R", "L"):
+            pr = fs.ProblemaCN(orac, p, c, [esc[0]], [0], ab, modo=modo)
+            corr, mejor = multiarranque(pr, ths, f"modo {modo}")
+            Js = np.array([f["J"] for f in corr if f["viol"] <= TOL_FACT])
+            filas.append(fila_sintonia(pr, mejor["z"], modo=modo, metodo="F2", n_factibles=len(Js),
+                                       n_mejor=int(np.sum(Js <= mejor["J"] * (1 + 1e-3))),
+                                       J_cuencas=" ".join(f"{v:.4f}" for v in sorted(set(np.round(Js, 4))))))
+            P = form_directa.ProblemaDirecto(p, c, [esc[0]], "trapecio", modo=modo)
+            r = P.resolver(pr.theta(mejor["z"]))
+            z = pr.z_de(r["th"])
+            filas.append(fila_sintonia(pr, z, modo=modo, metodo="F4", estado=r["estado"], t_s=r["t_s"],
+                                       J_modelo=r["J"], **{k: v for k, v in r.items() if k.startswith("lam_")
+                                                           and not isinstance(v, list)},
+                                       lam_est=" ".join(f"{v:.3e}" for v in r["lam_est"]),
+                                       lam_R9=" ".join(f"{v:.3e}" for v in r["lam_R9"])))
+            log(f"modo {modo} F4: {r['estado']} J = {r['J']:.5f} (Julia {filas[-1]['J']:.5f})")
+    pd.DataFrame(filas).to_csv(R / "modos.csv", index=False)
+
+
+# ---------------------------------------------------------------- fuera de muestra
+rng = MersenneTwister(2026)
+N = 500
+muestras = [Dict("nombre" => "m$k", "barra" => rand(rng, 2:5), "dP" => 20 + 30 * rand(rng),
+                 "SOC0" => 0.2 .+ 0.6 .* rand(rng, 2), "P_fv2" => 35 + 10 * rand(rng)) for k in 1:N]
+open(joinpath(dir, "fuera_muestra.csv"), "w") do io
+    println(io, cs(["sintonia", "muestra", "barra", "dP", "SOC1", "SOC2", "P_fv2", "J", "dfmax_Hz", "max_violacion",
+                    "restriccion_peor", "factible", "J_lim", "dfmax_lim", "pred_max"]))
+    for d in muestras
+        e = s.nuevo_esc(d)
+        for x in sint
+            θ = θ_de(x, e)
+            m, g = evaluar(s, sin_limitador(e), θ)
+            ml, _ = evaluar(s, e, θ)
+            println(io, cs([x.nombre, d["nombre"], d["barra"], d["dP"], d["SOC0"]..., d["P_fv2"], m[1], m[2],
+                            max(0.0, maximum(g)), NOMBRES_G[argmax(g)], maximum(g) <= TOL, ml[1], ml[2],
+                            max(ml[findfirst(==("pred1_max"), NOMBRES_M)], ml[findfirst(==("pred2_max"), NOMBRES_M)])]))
+        end
+    end
+end
+
+# ---------------------------------------------------------------- escalón de consigna de tensión (1 %)
+open(joinpath(dir, "escalon_tension.csv"), "w") do io
+
+exec
+/usr/bin/zsh -lc "cat > Codigos_final/python/graficar.py <<'PY'
+\"\"\"Figuras del informe final; ejecutar de nuevo al terminar los experimentos.\"\"\"
+import sys
+from pathlib import Path
+
+import matplotlib
+import numpy as np
+import pandas as pd
+
+matplotlib.use(\"Agg\")
+import matplotlib.pyplot as plt
+
+R = Path(__file__).resolve().parents[1] / \"resultados\"
+SAL = Path(sys.argv[1]) if len(sys.argv) > 1 else R.parents[1] / \"Informe/figuras\"
+SAL.mkdir(parents=True, exist_ok=True)
+SERIES = [\"#2a78d6\", \"#eb6834\", \"#1baf7a\", \"#eda100\", \"#e87ba4\", \"#008300\", \"#4a3aa7\", \"#e34948\"]
+plt.rcParams.update({\"font.size\": 7, \"axes.edgecolor\": \"#8a8984\", \"axes.labelcolor\": \"#0b0b0b\",
+                     \"xtick.color\": \"#52514e\", \"ytick.color\": \"#52514e\", \"axes.grid\": True,
+                     \"grid.color\": \"#e4e3df\", \"grid.linewidth\": 0.5, \"axes.spines.top\": False,
+                     \"axes.spines.right\": False, \"lines.linewidth\": 1.4, \"legend.frameon\": False,
+                     \"savefig.bbox\": \"tight\", \"font.family\": \"serif\"})
+ETIQ = {\"F1\": \"F1 artículo (SQP+PSO)\", \"F2\": \"F2 SQP\", \"F3\": \"F3 PSO\",
+        \"F4\": \"F4 colocación\", \"F4b\": \"F4b colocación L-BFGS\", \"F5\": \"F5 disparo múltiple\"}
+
+
+def leer(nombre):
+    try:
+        return pd.read_csv(R / nombre)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        print(f\"Aviso: {nombre} ausente o vacío; datos pendientes.\")
+        return pd.DataFrame()
+
+
+def pendiente(nombre):
+    fig, ax = plt.subplots(figsize=(3.5, 1.5))
+    ax.axis(\"off\")
+    ax.text(0.5, 0.5, \"pendiente\", ha=\"center\", va=\"center\", transform=ax.transAxes)
+    fig.savefig(SAL / nombre, bbox_inches=None)
+    plt.close(fig)
+
+
+tr = leer(\"trayectorias.csv\")
+if tr.empty:
+    pendiente(\"trayectorias_final.pdf\")
+else:
+    fig, axs = plt.subplots(3, 1, figsize=(3.5, 4.2), sharex=True)
+    for k, (s, etiqueta) in enumerate([(\"inicial\", \"θ inicial\"), (\"F1_articulo\", \"F1 artículo\"),
+                                         (\"opt_R\", \"Óptimo R\"), (\"opt_L\", \"Óptimo L\")]):
+        for lim in ([1, 0] if s == \"F1_articulo\" else [1]):
+            g = tr[(tr.sintonia == s) & (tr.lim == lim)].sort_values(\"t\")
+            if g.empty:
+                continue
+            for ax, col in zip(axs, [\"f_sg\", \"I1\", \"pb1\"]):
+                ax.plot(g.t, g[col], color=SERIES[k], ls=\"-\" if lim else \"--\",
+                        label=etiqueta if lim else \"F1 artículo sin limitador\")
+    for ax, etiqueta in zip(axs, [r\""'$f_{SG}$ [Hz]", r"$I_1$ [pu]", r"$p_{b,1}$ [pu]"]):
+        ax.set_ylabel(etiqueta)
+        ax.set_xlim(0, 30)
+    for ax in axs[1:]:
+        ax.axhline(1.0, color="#52514e", lw=0.8, ls=":")
+    axs[1].axhline(1.3, color="#52514e", lw=0.8, ls=":")
+    axs[-1].set_xlabel("Tiempo [s]")
+    fig.legend(*axs[0].get_legend_handles_labels(), loc="upper center", ncol=2, fontsize=6)
+    fig.tight_layout(rect=(0, 0, 1, 0.88), h_pad=0.5)
+    fig.savefig(SAL / "trayectorias_final.pdf", bbox_inches=None)
+    plt.close(fig)
+
+corridas = {p.stem.removeprefix("corridas_"): leer(p.name) for p in sorted(R.glob("corridas_F*.csv"))}
+finales = pd.concat(corridas.values(), ignore_index=True) if corridas else pd.DataFrame()
+Jstar = finales.loc[finales.viol_real <= 1e-3, "J_real"].min() if not finales.empty else np.nan
+if not np.isfinite(Jstar):
+    print("Aviso: no hay J* factible; perfil de convergencia pendiente.")
+    pendiente("convergencia_final.pdf")
+else:
+    print(f"J* global factible = {Jstar:.10g}; umbral del perfil = {1.01 * Jstar:.10g}")
+    perfiles = []
+    for k, (f, etiqueta) in enumerate(ETIQ.items()):
+        c = corridas.get(f, pd.DataFrame())
+        if c.empty:
+            print(f"Aviso: corridas_{f}.csv ausente o vacío; se omite {f}.")
+            continue
+        g = leer(f"conv_{f}.csv")
+        if g.empty:
+            continue
+        g = g[g.corrida.isin(c.corrida.unique()) & np.isfinite(g.t_s) & (g.t_s >= 0)]
+        exitos = g[(g.viol_real <= 1e-3) & (g.J_real <= 1.01 * Jstar)]
+        tiempos = exitos.groupby("corrida").t_s.min().sort_values().to_numpy()
+        perfiles.append((k, etiqueta, c.corrida.nunique(), tiempos, g.t_s.to_numpy()))
+    if not perfiles:
+        pendiente("convergencia_final.pdf")
+    else:
+        observados = np.concatenate([p[4] for p in perfiles])
+        positivos = observados[observados > 0]
+        inicio = min(0.01, positivos.min() / 2) if positivos.size else 0.01
+        fin = max(1.0, observados.max() * 1.05) if observados.size else 1.0
+        fig, ax = plt.subplots(figsize=(3.5, 2.9))
+        for k, etiqueta, n, tiempos, _ in perfiles:
+            x = np.r_[inicio, np.maximum(tiempos, inicio), fin]
+            y = np.r_[0, np.arange(1, len(tiempos) + 1) / n, len(tiempos) / n]
+            ax.step(x, y, where="post", color=SERIES[k], label=etiqueta)
+        ax.set(xscale="log", xlim=(inicio, fin), ylim=(0, 1.02),
+               xlabel="Tiempo de cómputo [s]", ylabel="Fracción de corridas")
+        ax.legend(fontsize=6, loc="upper left")
+        fig.tight_layout()
+        fig.savefig(SAL / "convergencia_final.pdf", bbox_inches=None)
+        plt.close(fig)
+
+b = leer("barridos.csv")
+if b.empty:
+    pendiente("barridos_final.pdf")
+else:
+    fig, axs = plt.subplots(1, 2, figsize=(3.5, 2.0))
+    g = b[b.barrido == "reserva"].sort_values("valor")
+    if not g.empty:
+        x = 100 * g.valor.to_numpy()
+        axs[0].plot(x, g.J_modelo, "o-", color=SERIES[0], ms=3)
+        distintos = np.unique(x)
+        semiancho = np.diff(distintos).min() * 0.18 if len(distintos) > 1 else 0.2
+        for _, r in g.iterrows():
+            dx = np.array([-semiancho, semiancho])
+            axs[0].plot(100 * r.valor + dx, r.J_modelo + dx * r.dJ_drho_multiplicador / 100,
+                        color=SERIES[1], lw=1)
+    else:
+        axs[0].text(0.5, 0.5, "pendiente", ha="center", transform=axs[0].transAxes)
+    for k, modo in enumerate(["R", "L"]):
+        g = b[b.barrido == f"dP_{modo}"].sort_values("valor")
+        if not g.empty:
+            axs[1].plot(g.valor, g.dfmax_Hz, "o-", color=SERIES[k], ms=3, label=f"Modo {modo}")
+    if axs[1].lines:
+        axs[1].legend(fontsize=6)
+    else:
+        axs[1].text(0.5, 0.5, "pendiente", ha="center", transform=axs[1].transAxes)
+    axs[0].set(xlabel="Energía reservada [%]", ylabel=r"$J_{modelo}$")
+    axs[1].set(xlabel="Escalón [MW]", ylabel=r"$'"\\Delta f_{max}"'$ [Hz]")
+    fig.tight_layout(w_pad=0.8)
+    fig.savefig(SAL / "barridos_final.pdf", bbox_inches=None)
+    plt.close(fig)
+print("Figuras en", SAL)
+PY' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+exec
+/usr/bin/zsh -lc "cat > Codigos_final/python/resumen.py <<'PY'
+\"\"\"Tablas booktabs y números para la redacción del informe final.\"\"\"
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+R = Path(__file__).resolve().parents[1] / \"resultados\"
+SAL = Path(sys.argv[1]) if len(sys.argv) > 1 else R.parents[1] / \"Informe/tablas\"
+SAL.mkdir(parents=True, exist_ok=True)
+NOMBRES = {\"inicial\": r\""'$'"\\theta"'$ inicial", "F1_articulo": "F1 artículo", "opt_R": "Óptimo R",
+           "opt_L": "Óptimo L", "minmax": "Mín. máximo", "esperado": "Valor esperado",
+           "cvar": "CVaR", "afin": "Regla afín"}
+FORM = {"F1": "F1 artículo (SQP+PSO)", "F2": "F2 SQP", "F3": "F3 PSO",
+        "F4": "F4 colocación", "F4b": "F4b colocación L-BFGS", "F5": "F5 disparo múltiple"}
+TH = ["H1", "H2", "D1", "D2", "Kq1", "Kq2", "K1", "K2"]
+CAB_TH = [r"$H_1$", r"$H_2$", r"$D_1$", r"$D_2$", r"$K_{q,1}$", r"$K_{q,2}$", r"$K_1$", r"$K_2$"]
+
+
+def leer(nombre):
+    try:
+        return pd.read_csv(R / nombre)
+    except (FileNotFoundError, pd.errors.EmptyDataError):
+        print(f"Aviso: {nombre} ausente o vacío; pendiente.")
+        return pd.DataFrame()
+
+
+def texto(valor):
+    return "".join({"'"\\\\\": r\"\\textbackslash{}\", \"_\": r\"\\_\", \"%\": r\"\\%\", \"&\": r\"\\&\",
+                    \"#\": r\"\\#\", \""'$": r"'"\\"'$", "{": r"'"\\{\", \"}\": r\"\\}\",
+                    \"~\": r\"\\textasciitilde{}\", \""'^": r"'"\\textasciicircum{}\"}.get(c, c) for c in str(valor))
+
+
+def nombre(valor):
+    return NOMBRES.get(valor, texto(valor))
+
+
+def num(valor, dec=3):
+    if pd.isna(valor) or not np.isfinite(float(valor)):
+        return \"--\"
+    return f\"{float(valor):.{dec}f}\".replace(\".\", \"{,}\")
+
+
+def tabla(archivo, cabecera, filas):
+    n = len(cabecera)
+    if not filas:
+        filas = [[rf\"\\multicolumn{{{n}}}{{c}}{{pendiente}}\"]]
+    contenido = [r\"\\begin{tabular}{l\" + \"r\" * (n - 1) + \"}\", r\"\\toprule\",
+                 \" & \".join(cabecera) + r\" \\\\\", r\"\\midrule\"]
+    contenido += [\" & \".join(fila) + r\" \\\\\" for fila in filas]
+    contenido += [r\"\\bottomrule\", r\"\\end{tabular}\"]
+    (SAL / archivo).write_text(\"\\n\".join(contenido) + \"\\n\", encoding=\"utf-8\")
+
+
+opt = leer(\"optimos.csv\")
+val = leer(\"validacion.csv\")
+cert = leer(\"certificados.csv\")
+filas = []
+for _, r in opt.iterrows():
+    s = r.sintonia
+    v = val[(val.sintonia == s) & (val.escenario == \"S1_carga_b5\")] if not val.empty else pd.DataFrame()
+    con = v[v.lim == 1] if not v.empty else pd.DataFrame()
+    sin = v[v.lim == 0] if not v.empty else pd.DataFrame()
+    c = cert[cert.sintonia == s] if not cert.empty else pd.DataFrame()
+    # El certificado ya contiene el mínimo entre los escenarios.
+    filas.append([nombre(s)] + [num(r.get(k, np.nan)) for k in TH]
+                 + [num(con.iloc[0].get(k, np.nan)) if not con.empty else \"--\"
+                    for k in [\"J\", \"dfmax_Hz\", \"I1_fin\", \"pb1_pico\", \"pred1_max\"]]
+                 + [num(sin.iloc[0].get(\"max_violacion\", np.nan)) if not sin.empty else \"--\",
+                    num(c.zeta_min.min()) if not c.empty else \"--\"])
+tabla(\"sintonias.tex\", [\"Sintonía\"] + CAB_TH + [r\""'$J$", r"$'"\\Delta f_{max}"'$ [Hz]",
+      r"$I_1(T)$", r"$p_{b,1}''^{pico}$", r"$'"\\rho_1"'^{max}$", "Viol. (R)", r"$'"\\zeta_{min}"'$"], filas)
+
+a = leer("ablacion.csv")
+filas = [[texto(r.caso)] + [num(r.get(k, np.nan)) for k in TH[:6] + ["dfmax_Hz", "J", "viol_P"]]
+         for _, r in a.iterrows()]
+tabla("ablacion.tex", ["Caso"] + CAB_TH[:6] + [r"$'"\\Delta f_{max}"'$ [Hz]", "$J$", "Viol. (P)"], filas)
+
+corridas = {p.stem.removeprefix("corridas_"): leer(p.name) for p in sorted(R.glob("corridas_F*.csv"))}
+todas = pd.concat(corridas.values(), ignore_index=True) if corridas else pd.DataFrame()
+Jstar = todas.loc[todas.viol_real <= 1e-3, "J_real"].min() if not todas.empty else np.nan
+print(f"'"\\nJ* global factible: {Jstar:.10g}; mejor cuenca: J <= {1.005 * Jstar:.10g}\")
+filas = []
+for f, etiqueta in FORM.items():
+    g = corridas.get(f, pd.DataFrame())
+    if g.empty:
+        filas.append([texto(etiqueta), \"pendiente\"] + [\"--\"] * 6)
+        continue
+    fact = g[g.viol_real <= 1e-3]
+    mejor = (fact.J_real <= 1.005 * Jstar).sum()
+    columna = \"n_eval\" if f in [\"F1\", \"F2\", \"F3\"] else \"iteraciones\"
+    nv = g.n_var.dropna().unique() if \"n_var\" in g else []
+    nvar = \"/\".join(num(v, 0) for v in sorted(nv)) if len(nv) else \"--\"
+    filas.append([texto(etiqueta), str(len(g)), str(len(fact)), str(mejor), num(fact.J_real.median(), 4),
+                  num(g.t_total_s.median(), 1), num(g[columna].median(), 0) if columna in g else \"--\", nvar])
+    print(f\"{f}: {len(g)} corridas, {len(fact)} factibles, {mejor} en mejor cuenca; \"
+          f\"mediana J factible={fact.J_real.median():.6g}, t={g.t_total_s.median():.6g} s\")
+tabla(\"convergencia.tex\", [\"Formulación\", \"Corridas\", \"Factibles\", \"Mejor\", r\"Med. "'$J$",
+      r"Med. $t$ [s]", "Eval./iter.", r"$n_{var}$"], filas)
+
+rob = leer("robusto.csv")
+fue = leer("fuera_muestra.csv")
+filas = []
+for _, r in rob.iterrows():
+    g = fue[fue.sintonia == r.sintonia] if not fue.empty else pd.DataFrame()
+    pct, media = "--", "--"
+    if not g.empty:
+        factible = g.factible.astype(str).str.lower().map({"true": 1.0, "false": 0.0,
+                                                         "1": 1.0, "0": 0.0, "1.0": 1.0, "0.0": 0.0})
+        pct, media = num(100 * factible.mean(), 1), num(g.J.mean())
+    filas.append([nombre(r.sintonia)] + [num(r.get(k, np.nan)) for k in ["J_S1", "J_S2", "J_S3", "J_max", "J_esp"]]
+                 + [pct, media])
+tabla("robusto.tex", ["Sintonía", r"$J_{S1}$", r"$J_{S2}$", r"$J_{S3}$", r"$J_{max}$",
+      r"$J_{esp}$", r"Factibles ['"\\%]\", r\""'$'"\\overline J"'$"], filas)
+
+print("'"\\nRestricciones activas y multiplicadores (modos.csv)\")
+modos = leer(\"modos.csv\")
+if not modos.empty:
+    columnas = [c for c in modos if c in [\"modo\", \"metodo\", \"sintonia\", \"J\", \"viol_P\", \"activas\"]
+                or c.startswith(\"lam_\")]
+    print(modos[columnas].to_string(index=False))
+for archivo in [\"pesos.csv\", \"malla.csv\", \"validacion_densa.csv\", \"largo_plazo.csv\", \"escalon_tension.csv\"]:
+    print(f\"\\n{archivo}\")
+    g = leer(archivo)
+    if g.empty:
+        continue
+    if archivo in [\"pesos.csv\", \"malla.csv\"]:
+        print(g.to_string(index=False))
+    else:
+        # Extremos y medias por sintonía; conserva el escenario y los diagnósticos textuales.
+        for s, grupo in g.groupby(\"sintonia\", sort=False):
+            print(f\"{s}: {len(grupo)} filas\")
+            numericas = grupo.select_dtypes(include=\"number\")
+            if not numericas.empty:
+                print(numericas.agg([\"min\", \"mean\", \"max\"]).to_string())
+            for c in grupo.select_dtypes(exclude=\"number\"):
+                if c "'!= "sintonia":
+                    print(f"  {c}: {'"', '.join(grupo[c].dropna().astype(str).unique())}\")
+print(\"\\ncertificados.csv (amortiguamiento y Lyapunov común)\")
+if not cert.empty:
+    print(cert.to_string(index=False))
+print(\"\\nTablas en\", SAL)
+PY
+'/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' Codigos_final/python/resumen.py" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 708ms:
+Aviso: optimos.csv ausente o vacío; pendiente.
+Aviso: validacion.csv ausente o vacío; pendiente.
+Aviso: certificados.csv ausente o vacío; pendiente.
+Aviso: ablacion.csv ausente o vacío; pendiente.
+
+J* global factible: 0.6313581293; mejor cuenca: J <= 0.6345149199
+F2: 20 corridas, 20 factibles, 7 en mejor cuenca; mediana J factible=0.661526, t=10.0037 s
+F4b: 4 corridas, 3 factibles, 0 en mejor cuenca; mediana J factible=0.730259, t=507.479 s
+Aviso: robusto.csv ausente o vacío; pendiente.
+Aviso: fuera_muestra.csv ausente o vacío; pendiente.
+
+Restricciones activas y multiplicadores (modos.csv)
+Aviso: modos.csv ausente o vacío; pendiente.
+
+pesos.csv
+Aviso: pesos.csv ausente o vacío; pendiente.
+
+malla.csv
+Aviso: malla.csv ausente o vacío; pendiente.
+
+validacion_densa.csv
+Aviso: validacion_densa.csv ausente o vacío; pendiente.
+
+largo_plazo.csv
+Aviso: largo_plazo.csv ausente o vacío; pendiente.
+
+escalon_tension.csv
+Aviso: escalon_tension.csv ausente o vacío; pendiente.
+
+certificados.csv (amortiguamiento y Lyapunov común)
+
+Tablas en /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe/tablas
+
+exec
+/usr/bin/zsh -lc "'/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' Codigos_final/python/graficar.py" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 6321ms:
+/home/jay_c/.config/matplotlib is not a writable directory
+Matplotlib created a temporary cache directory at /tmp/matplotlib-nrth5sy0 because there was an issue with the default path (/home/jay_c/.config/matplotlib); it is highly recommended to set the MPLCONFIGDIR environment variable to a writable directory, in particular to speed up the import of Matplotlib and to better support multiprocessing.
+Aviso: trayectorias.csv ausente o vacío; datos pendientes.
+J* global factible = 0.6313581293; umbral del perfil = 0.6376717106
+Aviso: corridas_F1.csv ausente o vacío; se omite F1.
+Aviso: corridas_F3.csv ausente o vacío; se omite F3.
+Aviso: corridas_F4.csv ausente o vacío; se omite F4.
+Aviso: corridas_F5.csv ausente o vacío; se omite F5.
+Aviso: barridos.csv ausente o vacío; datos pendientes.
+Figuras en /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe/figuras
+
+codex
+Ambos scripts se ejecutaron sin errores y generaron los tres PDF y las cuatro tablas. En esa lectura había resultados disponibles de F2 y F4b; el mejor objetivo factible fue \(J^\star=0{,}6313581293\). Ahora comprobaré la compilación y probaré con datos temporales las ramas cuyos CSV aún faltan.
+
+exec
+/usr/bin/zsh -lc 'pdflatex -interaction=nonstopmode informe_final.tex' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe
+ succeeded in 952ms:
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex)
+ restricted \write18 enabled.
+entering extended mode
+(./informe_final.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-03-20>
+(./IEEEtran.cls
+Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
+-- See the "IEEEtran_HOWTO" manual for usage information.
+-- http://www.michaelshell.org/tex/ieeetran/
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1ptm.fd)
+-- Using 8.5in x 11in (letter) paper.
+-- Using PDF output.
+-- This is a 10 point document.
+) (/usr/share/texlive/texmf-dist/tex/latex/booktabs/booktabs.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsmath.sty
+For additional information on amsmath, use the `?' option.
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amstext.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsgen.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsbsy.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/amsmath/amsopn.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amssymb.sty
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/amsfonts.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphicx.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/keyval.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/graphics.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/trig.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/graphics.cfg)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-def/pdftex.def)))
+(/usr/share/texlive/texmf-dist/tex/latex/base/inputenc.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/base/fontenc.sty
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/t1ptm.fd))
+(/usr/share/texlive/texmf-dist/tex/latex/url/url.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/frontendlayer/tikz.sty
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/basiclayer/pgf.sty
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/utilities/pgfrcs.sty
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfutil-common.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfutil-latex.def)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfrcs.code.tex
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/pgf.revision.tex)))
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/basiclayer/pgfcore.sty
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/systemlayer/pgfsys.sty
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsys.code.tex
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfkeyslibraryfiltered
+.code.tex)) (/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgf.cfg)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-pdftex.def
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsys-common-pdf.de
+f)))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsyssoftpath.code.
+tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/systemlayer/pgfsysprotocol.code.
+tex)) (/usr/share/texlive/texmf-dist/tex/latex/xcolor/xcolor.sty
+(/usr/share/texlive/texmf-dist/tex/latex/graphics-cfg/color.cfg)
+(/usr/share/texlive/texmf-dist/tex/latex/graphics/mathcolor.ltx))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcore.code.tex
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathutil.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathparser.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.basic.code
+.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.trigonomet
+ric.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.random.cod
+e.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.comparison
+.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.base.code.
+tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.round.code
+.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.misc.code.
+tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfunctions.integerari
+thmetics.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathcalc.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmathfloat.code.tex))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfint.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepoints.code.te
+x)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathconstruct.
+code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathusage.code
+.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorescopes.code.te
+x)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoregraphicstate.c
+ode.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransformation
+s.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorequick.code.tex
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreobjects.code.t
+ex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepathprocessing
+.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorearrows.code.te
+x)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreshade.code.tex
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreimage.code.tex
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoreexternal.code.
+tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorelayers.code.te
+x)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcoretransparency.c
+ode.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorepatterns.code.
+tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/basiclayer/pgfcorerdf.code.tex))
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmoduleshapes.code.tex
+) (/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmoduleplot.code.tex
+)
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version-0-65
+.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/compatibility/pgfcomp-version-1-18
+.sty)) (/usr/share/texlive/texmf-dist/tex/latex/pgf/utilities/pgffor.sty
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/utilities/pgfkeys.sty
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgfkeys.code.tex))
+(/usr/share/texlive/texmf-dist/tex/latex/pgf/math/pgfmath.sty
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/math/pgfmath.code.tex))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/utilities/pgffor.code.tex))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/tikz.code.tex
+
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryplothandlers
+.code.tex)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/modules/pgfmodulematrix.code.tex
+)
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tik
+zlibrarytopaths.code.tex)))
+(/usr/share/texlive/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.
+code.tex) (/usr/share/texlive/texmf-dist/tex/latex/mathtools/mathtools.sty
+(/usr/share/texlive/texmf-dist/tex/latex/tools/calc.sty)
+(/usr/share/texlive/texmf-dist/tex/latex/mathtools/mhsetup.sty))
+(/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def)
+No file informe_final.aux.
+-- Lines per column: 58 (exact).
+(/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+) (/usr/share/texlive/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+(/usr/share/texlive/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg))
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd)
+(/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd)
+
+LaTeX Warning: Citation `Du2021' on page 1 undefined on input line 67.
+
+
+LaTeX Warning: Citation `CNE_NTSyCS2026' on page 1 undefined on input line 67.
+
+
+LaTeX Warning: Citation `CNE_ATIBR2026' on page 1 undefined on input line 68.
+
+
+LaTeX Warning: Citation `CEN_GuiaGFM2026' on page 1 undefined on input line 68.
+
+
+
+LaTeX Warning: Reference `tab:brecha' on page 1 undefined on input line 73.
+
+
+LaTeX Warning: Citation `Wang2024' on page 1 undefined on input line 74.
+
+
+LaTeX Warning: Citation `Poolla2017' on page 1 undefined on input line 76.
+
+
+LaTeX Warning: Citation `Buire2026' on page 1 undefined on input line 77.
+
+
+LaTeX Warning: Citation `Krajacic2025' on page 1 undefined on input line 78.
+
+
+LaTeX Warning: Citation `She2024' on page 1 undefined on input line 80.
+
+
+LaTeX Warning: Citation `Hu2025' on page 1 undefined on input line 81.
+
+
+LaTeX Warning: Citation `Fan2022' on page 1 undefined on input line 82.
+
+
+LaTeX Warning: Citation `He2025' on page 1 undefined on input line 82.
+
+
+LaTeX Warning: Citation `Wang2024' on page 1 undefined on input line 101.
+
+
+LaTeX Warning: Citation `Poolla2017' on page 1 undefined on input line 101.
+
+
+LaTeX Warning: Citation `Buire2026' on page 1 undefined on input line 101.
+
+
+LaTeX Warning: Citation `Krajacic2025' on page 1 undefined on input line 101.
+
+
+LaTeX Warning: Citation `She2024' on page 1 undefined on input line 101.
+
+
+LaTeX Warning: Citation `Stagg1968' on page 1 undefined on input line 124.
+
+
+LaTeX Warning: Citation `Kumari2021' on page 1 undefined on input line 125.
+
+
+LaTeX Warning: Reference `fig:unilineal' on page 1 undefined on input line 125.
+
+
+
+LaTeX Warning: Citation `Kundur1994' on page 1 undefined on input line 126.
+
+[1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-
+dist/fonts/enc/dvips/base/8r.enc}] (./figuras/diagrama_5barras.tex)
+
+LaTeX Warning: Citation `Wang2024' on page 2 undefined on input line 143.
+
+
+LaTeX Warning: Citation `Kundur1994' on page 2 undefined on input line 146.
+
+
+Overfull \hbox (23.41759pt too wide) detected at line 160
+[]
+
+Overfull \hbox (22.71948pt too wide) detected at line 175
+[]
+
+LaTeX Warning: Citation `Fan2022' on page 2 undefined on input line 180.
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 185--187
+[]\T1/ptm/m/n/10 Las de-ci-siones son $\OML/cmm/m/it/10 ^^R \OT1/cmr/m/n/10 =
+
+Overfull \hbox (53.66208pt too wide) detected at line 190
+[]
+
+LaTeX Warning: Reference `tab:restr' on page 2 undefined on input line 204.
+
+
+LaTeX Warning: Reference `tab:param' on page 2 undefined on input line 205.
+
+
+LaTeX Warning: Citation `Hu2025' on page 2 undefined on input line 230.
+
+
+LaTeX Warning: Reference `sec:activas' on page 2 undefined on input line 269.
+
+
+LaTeX Warning: Citation `Kumari2021' on page 2 undefined on input line 272.
+
+
+Underfull \hbox (badness 2626) in paragraph at lines 266--273
+[]\T1/ptm/m/n/10 (i) Mod-elo RMS: es v�lido para la din�mica elec-
+[2]
+
+LaTeX Warning: Reference `eq:lim' on page 3 undefined on input line 278.
+
+
+LaTeX Warning: Reference `eq:obj' on page 3 undefined on input line 285.
+
+
+LaTeX Warning: Citation `Wang2024' on page 3 undefined on input line 289.
+
+
+LaTeX Warning: Citation `Kennedy1995' on page 3 undefined on input line 292.
+
+
+LaTeX Warning: Citation `Andersson2019' on page 3 undefined on input line 297.
+
+
+LaTeX Warning: Citation `Wachter2006' on page 3 undefined on input line 297.
+
+
+LaTeX Warning: Citation `Biegler2010' on page 3 undefined on input line 298.
+
+
+LaTeX Warning: Citation `Geng2014' on page 3 undefined on input line 299.
+
+
+LaTeX Warning: Citation `Gan2000' on page 3 undefined on input line 299.
+
+
+LaTeX Warning: Citation `Rockafellar2000' on page 3 undefined on input line 305
+.
+
+
+LaTeX Warning: Citation `BenTal2004' on page 3 undefined on input line 309.
+
+
+LaTeX Warning: Citation `Boyd1994' on page 3 undefined on input line 315.
+
+
+LaTeX Warning: Citation `Chilali1996' on page 3 undefined on input line 315.
+
+(./tablas/sintonias.tex)
+
+LaTeX Warning: Reference `tab:abl' on page 3 undefined on input line 339.
+
+(./tablas/ablacion.tex) [3] (./tablas/convergencia.tex) (./tablas/robusto.tex)
+No file informe_final.bbl.
+[4 <./figuras/trayectorias_final.pdf> <./figuras/barridos_final.pdf>] [5 <./fig
+uras/convergencia_final.pdf>] (./informe_final.aux)
+
+LaTeX Warning: There were undefined references.
+
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+ )
+(see the transcript file for additional information)</usr/share/texlive/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/share/texlive/texmf-dist/fo
+nts/type1/public/amsfonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/ty
+pe1/public/amsfonts/cm/cmmi5.pfb></usr/share/texlive/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmmi6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmmi8.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9
+.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmib10.pfb>
+</usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/s
+hare/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/tex
+live/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/tex
+mf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/share/texlive/texmf-dist/
+fonts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/ty
+pe1/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/pu
+blic/amsfonts/cm/cmsy6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
+sfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
+cm/cmsy8.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></
+usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></usr/share/texl
+ive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/
+fonts/type1/urw/times/utmri8a.pfb>
+Output written on informe_final.pdf (5 pages, 300903 bytes).
+Transcript written on informe_final.log.
+
+exec
+/usr/bin/zsh -lc 'ls -l Codigos_final/resultados/*.csv Informe/tablas/*.tex; cat Informe/tablas/convergencia.tex' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+-rw-r--r--. 1 jay_c jay_c 220817 Nov 14 11:17 Codigos_final/resultados/conv_F1.csv
+-rw-r--r--. 1 jay_c jay_c 381231 Nov 13 20:28 Codigos_final/resultados/conv_F2.csv
+-rw-r--r--. 1 jay_c jay_c 527434 Nov 13 20:52 Codigos_final/resultados/conv_F4b.csv
+-rw-r--r--. 1 jay_c jay_c    282 Nov 14 11:17 Codigos_final/resultados/corridas_F1.csv
+-rw-r--r--. 1 jay_c jay_c   4779 Nov 13 20:28 Codigos_final/resultados/corridas_F2.csv
+-rw-r--r--. 1 jay_c jay_c   1488 Nov 13 20:52 Codigos_final/resultados/corridas_F4b.csv
+-rw-r--r--. 1 jay_c jay_c    212 Nov 14 11:17 Informe/tablas/ablacion.tex
+-rw-r--r--. 1 jay_c jay_c    543 Nov 14 11:17 Informe/tablas/convergencia.tex
+-rw-r--r--. 1 jay_c jay_c    206 Nov 14 11:17 Informe/tablas/robusto.tex
+-rw-r--r--. 1 jay_c jay_c    302 Nov 14 11:17 Informe/tablas/sintonias.tex
+\begin{tabular}{lrrrrrrr}
+\toprule
+Formulación & Corridas & Factibles & Mejor & Med. $J$ & Med. $t$ [s] & Eval./iter. & $n_{var}$ \\
+\midrule
+F1 artículo (SQP+PSO) & pendiente & -- & -- & -- & -- & -- & -- \\
+F2 SQP & 20 & 20 & 7 & 0{,}6615 & 10{,}0 & 379 & -- \\
+F3 PSO & pendiente & -- & -- & -- & -- & -- & -- \\
+F4 colocación & pendiente & -- & -- & -- & -- & -- & -- \\
+F4b colocación L-BFGS & 4 & 3 & 0 & 0{,}7303 & 507{,}5 & 500 & 14529 \\
+F5 disparo múltiple & pendiente & -- & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+
+exec
+/usr/bin/zsh -lc 'bibtex informe_final' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe
+ succeeded in 22ms:
+This is BibTeX, Version 0.99e (TeX Live 2026)
+The top-level auxiliary file: informe_final.aux
+The style file: IEEEtran.bst
+Database file #1: referencias.bib
+-- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
+-- http://www.michaelshell.org/tex/ieeetran/bibtex/
+-- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
+
+Done.
+
+exec
+/usr/bin/zsh -lc 'command -v pdfinfo; command -v pdftoppm' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 0ms:
+/usr/bin/pdfinfo
+/usr/bin/pdftoppm
+
+exec
+/usr/bin/zsh -lc "'/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' - <<'PY'
+from pathlib import Path
+p = Path('Codigos_final/python/resumen.py')
+s = p.read_text()
+s = s.replace('    (SAL / archivo).write_text(\"\\\\n\".join(contenido) + \"\\\\n\", encoding=\"utf-8\")', '    if archivo == \"sintonias.tex\":\\n        contenido = [r\"\\\\resizebox{\\\\textwidth}{"'!}{%"] + contenido + ["}"]'"\\n    (SAL / archivo).write_text(\"\\\\n\".join(contenido) + \"\\\\n\", encoding=\"utf-8\")')
+p.write_text(s)
+PY" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 6ms:
+exec
+/usr/bin/zsh -lc "cat > /tmp/verificar_tarea1.py <<'PY'
+import contextlib
+import io
+import os
+from pathlib import Path
+import runpy
+import shutil
+import sys
+import tempfile
+
+os.environ['MPLCONFIGDIR'] = '/tmp/mpl-tarea1'
+import matplotlib.figure
+import numpy as np
+import pandas as pd
+
+root = Path.cwd()
+tmp = Path(tempfile.mkdtemp(prefix='tarea1-'))
+p = tmp / 'Codigos_final/python'
+r = tmp / 'Codigos_final/resultados'
+p.mkdir(parents=True)
+r.mkdir()
+for script in ['graficar.py', 'resumen.py']:
+    shutil.copy(root / 'Codigos_final/python' / script, p / script)
+
+def csv(nombre, filas):
+    pd.DataFrame(filas).to_csv(r / nombre, index=False)
+
+th = dict(zip(['H1','H2','D1','D2','Kq1','Kq2','K1','K2'], [2.9,4.1,27.8,23.3,10,10,.279,.277]))
+csv('optimos.csv', [dict(sintonia=s, **th) for s in ['inicial','F1_articulo','opt_R','opt_L']])
+csv('validacion.csv', [dict(sintonia=s, escenario='S1_carga_b5', lim=lim, J=.632, dfmax_Hz=.42,
+    I1_fin=.99, pb1_pico=1.0, pred1_max=.02, max_violacion=.02 if lim == 0 else .001)
+    for s in ['inicial','F1_articulo','opt_R','opt_L'] for lim in [0,1]])
+csv('certificados.csv', [dict(sintonia='opt_R', zeta_min=.06, alpha_LMI_comun=.1)])
+csv('ablacion.csv', [dict(caso='R_3 & R4', J=.632, dfmax_Hz=.42, viol_P=.001, **th)])
+csv('robusto.csv', [dict(sintonia=s, J_S1=.6,J_S2=.7,J_S3=.8,J_max=.8,J_esp=.67) for s in ['opt_R','afin']])
+csv('fuera_muestra.csv', [dict(sintonia='opt_R', factible=b, J=j) for b,j in [(True,.6),(False,.8)]])
+for f in ['F1','F2','F3','F4','F4b','F5']:
+    csv(f'corridas_{f}.csv', [dict(formulacion=f,corrida=i,J_real=j,viol_real=v,t_total_s=100,
+        n_eval=40,iteraciones=10,n_var=9) for i,j,v in [(0,1,0),(1,1.004,0),(2,.1,.1)]])
+    csv(f'conv_{f}.csv', [dict(formulacion=f,corrida=i,iter=0,t_s=t,J_real=j,viol_real=0)
+        for i,t,j in [(0,2,1),(0,3,1),(1,4,1.009),(2,5,2)]])
+csv('trayectorias.csv', [dict(sintonia=s,lim=lim,t=t,f_sg=50-t*.01,I1=.7+t*.01,pb1=.8+t*.01)
+    for s in ['inicial','F1_articulo','opt_R','opt_L'] for lim in [0,1] for t in [0,30]])
+csv('barridos.csv', [dict(barrido=b,valor=v,J_modelo=.6,dfmax_Hz=.4,dJ_drho_multiplicador=-2)
+    for b,vs in [('reserva',[.04,.05]),('dP_R',[20,50]),('dP_L',[20,50])] for v in vs])
+for name in ['modos','pesos','malla','validacion_densa','largo_plazo','escalon_tension']:
+    csv(name+'.csv', [dict(sintonia='opt_R',activas='R4',lam_R4=2,J=.632)])
+saved = {}
+original = matplotlib.figure.Figure.savefig
+
+def guardar(fig, path, **kw):
+    saved[Path(path).name] = [[(line.get_xdata().copy(),line.get_ydata().copy()) for line in ax.lines] for ax in fig.axes]
+    return original(fig,path,**kw)
+
+matplotlib.figure.Figure.savefig = guardar
+sys.argv = ['script']
+with contextlib.redirect_stdout(io.StringIO()):
+    runpy.run_path(str(p/'graficar.py'))
+    runpy.run_path(str(p/'resumen.py'))
+# Dos corridas alcanzan el umbral: primera llegada a 2 s y 4 s; denominador tres.
+x,y = saved['convergencia_final.pdf'][0][0]
+assert np.allclose(x[1:3], [2,4]) and np.allclose(y, [0,1/3,2/3,2/3])
+assert len(saved['trayectorias_final.pdf']) == 3
+assert all(len(lines) == n for lines,n in zip(saved['trayectorias_final.pdf'], [5,7,6]))
+x,y = saved['barridos_final.pdf'][0][1]
+assert np.isclose((y[1]-y[0])/(x[1]-x[0]), -.02)
+tablas = tmp/'Informe/tablas'
+assert '50{,}0' in (tablas/'robusto.tex').read_text()
+assert '0{,}700' in (tablas/'robusto.tex').read_text()
+assert 'R\\\\_3 \\\\& R4' in (tablas/'ablacion.tex').read_text()
+assert 'F2 SQP & 3 & 2 & 2 & 1{,}0020' in (tablas/'convergencia.tex').read_text()
+assert '0{,}020' in (tablas/'sintonias.tex').read_text()
+# Compilar también las tablas completas, incluidas celdas escapadas y coma decimal.
+(tmp/'tablas_test.tex').write_text(r'\\documentclass{article}\\usepackage[utf8]{inputenc}\\usepackage{booktabs,graphicx}\\begin{document}'+'\\n'+ '\\n\\\\par\\n'.join(r'\\input{Informe/tablas/'+n+'}' for n in ['sintonias','ablacion','convergencia','robusto'])+r'\\end{document}')
+print('Verificación sintética correcta: perfiles, tangentes, filtros, tablas y ramas con datos.')
+print(tmp)
+PY
+'/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' /tmp/verificar_tarea1.py" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 5531ms:
+Verificación sintética correcta: perfiles, tangentes, filtros, tablas y ramas con datos.
+/tmp/tarea1-u1jh7pyh
+
+exec
+/usr/bin/zsh -lc 'pdflatex -interaction=nonstopmode -halt-on-error tablas_test.tex > tablas_test.stdout' in /tmp/tarea1-u1jh7pyh
+exec
+/usr/bin/zsh -lc "'/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' Codigos_final/python/resumen.py > Informe/tablas/resumen.stdout.txt" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+exec
+/usr/bin/zsh -lc "MPLCONFIGDIR=/tmp/mpl-tarea1 '/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' Codigos_final/python/graficar.py > Informe/figuras/graficar.stdout.txt" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 229ms:
+ succeeded in 823ms:
+ succeeded in 2695ms:
+codex
+Las pruebas con datos temporales confirmaron los tiempos de primera llegada y las fracciones del perfil, las pendientes tangentes y la coma decimal; las cuatro tablas completas también compilaron. La primera compilación del informe y BibTeX terminaron correctamente. Falta la segunda pasada de LaTeX. Detecté además que el pie de la tabla dice 0,1 %, aunque la tarea exige 0,5 %; mantuve el criterio solicitado y dejé el texto del informe intacto.
+
+exec
+/usr/bin/zsh -lc 'pdflatex -interaction=nonstopmode informe_final.tex > informe_final.compilacion.txt' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe
+ succeeded in 980ms:
+exec
+/usr/bin/zsh -lc 'cat Informe/tablas/resumen.stdout.txt Informe/figuras/graficar.stdout.txt; pdfinfo Informe/figuras/convergencia_final.pdf' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 160ms:
+Aviso: optimos.csv ausente o vacío; pendiente.
+Aviso: validacion.csv ausente o vacío; pendiente.
+Aviso: certificados.csv ausente o vacío; pendiente.
+Aviso: ablacion.csv ausente o vacío; pendiente.
+
+J* global factible: 0.6313581293; mejor cuenca: J <= 0.6345149199
+F1: 4 corridas, 0 factibles, 0 en mejor cuenca; mediana J factible=nan, t=17.9214 s
+F2: 20 corridas, 20 factibles, 7 en mejor cuenca; mediana J factible=0.661526, t=10.0037 s
+F4b: 4 corridas, 3 factibles, 0 en mejor cuenca; mediana J factible=0.730259, t=507.479 s
+F5: 1 corridas, 1 factibles, 0 en mejor cuenca; mediana J factible=0.659935, t=82.6935 s
+Aviso: robusto.csv ausente o vacío; pendiente.
+Aviso: fuera_muestra.csv ausente o vacío; pendiente.
+
+Restricciones activas y multiplicadores (modos.csv)
+Aviso: modos.csv ausente o vacío; pendiente.
+
+pesos.csv
+Aviso: pesos.csv ausente o vacío; pendiente.
+
+malla.csv
+Aviso: malla.csv ausente o vacío; pendiente.
+
+validacion_densa.csv
+Aviso: validacion_densa.csv ausente o vacío; pendiente.
+
+largo_plazo.csv
+Aviso: largo_plazo.csv ausente o vacío; pendiente.
+
+escalon_tension.csv
+Aviso: escalon_tension.csv ausente o vacío; pendiente.
+
+certificados.csv (amortiguamiento y Lyapunov común)
+
+Tablas en /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe/tablas
+Aviso: trayectorias.csv ausente o vacío; datos pendientes.
+J* global factible = 0.6313581293; umbral del perfil = 0.6376717106
+Aviso: corridas_F3.csv ausente o vacío; se omite F3.
+Aviso: corridas_F4.csv ausente o vacío; se omite F4.
+Aviso: barridos.csv ausente o vacío; datos pendientes.
+Figuras en /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe/figuras
+Creator:         Matplotlib v3.11.2, https://matplotlib.org
+Producer:        Matplotlib pdf backend v3.11.2
+CreationDate:    Sat Nov 14 11:19:00 2026 -03
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           1
+Encrypted:       no
+Page size:       251.439 x 207.714 pts
+Page rot:        0
+File size:       19229 bytes
+Optimized:       no
+PDF version:     1.4
+
+exec
+/usr/bin/zsh -lc "rg -n 'Warning|"'^!|Output written|Overfull'"' Informe/informe_final.log; pdftoppm -scale-to 1000 -singlefile -png Informe/figuras/convergencia_final.pdf /tmp/convergencia-tarea1" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 508ms:
+646:Overfull \hbox (23.41759pt too wide) detected at line 160
+651:Overfull \hbox (22.71948pt too wide) detected at line 175
+661:Overfull \hbox (53.66208pt too wide) detected at line 190
+726:Output written on informe_final.pdf (5 pages, 310480 bytes).
+
+exec
+/usr/bin/zsh -lc "'/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' - <<'PY'
+from pathlib import Path
+p=Path('Codigos_final/python/graficar.py')
+p.write_text(p.read_text().replace('bbox_inches=None', 'bbox_inches=fig.bbox_inches'))
+PY" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 479ms:
+exec
+/usr/bin/zsh -lc "MPLCONFIGDIR=/tmp/mpl-tarea1 '/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/bin/python' Codigos_final/python/graficar.py > Informe/figuras/graficar.stdout.txt" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 6953ms:
+exec
+/usr/bin/zsh -lc 'pdfinfo Informe/figuras/convergencia_final.pdf; ls -lh Informe/informe_final.pdf Informe/tablas/*.tex Informe/figuras/*_final.pdf' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+exec
+/usr/bin/zsh -lc 'pdflatex -interaction=nonstopmode informe_final.tex > informe_final.compilacion.txt' in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe
+ succeeded in 404ms:
+Creator:         Matplotlib v3.11.2, https://matplotlib.org
+Producer:        Matplotlib pdf backend v3.11.2
+CreationDate:    Sat Nov 14 11:19:30 2026 -03
+Custom Metadata: no
+Metadata Stream: no
+Tagged:          no
+UserProperties:  no
+Suspects:        no
+Form:            none
+JavaScript:      no
+Pages:           1
+Encrypted:       no
+Page size:       252 x 208.8 pts
+Page rot:        0
+File size:       19211 bytes
+Optimized:       no
+PDF version:     1.4
+-rw-r--r--. 1 jay_c jay_c 4.3K Nov 14 11:19 Informe/figuras/barridos_final.pdf
+-rw-r--r--. 1 jay_c jay_c  19K Nov 14 11:19 Informe/figuras/convergencia_final.pdf
+-rw-r--r--. 1 jay_c jay_c 4.3K Nov 14 11:19 Informe/figuras/trayectorias_final.pdf
+-rw-r--r--. 1 jay_c jay_c 304K Nov 14 11:19 Informe/informe_final.pdf
+-rw-r--r--. 1 jay_c jay_c  212 Nov 14 11:18 Informe/tablas/ablacion.tex
+-rw-r--r--. 1 jay_c jay_c  541 Nov 14 11:18 Informe/tablas/convergencia.tex
+-rw-r--r--. 1 jay_c jay_c  206 Nov 14 11:18 Informe/tablas/robusto.tex
+-rw-r--r--. 1 jay_c jay_c  332 Nov 14 11:18 Informe/tablas/sintonias.tex
+
+ succeeded in 3725ms:
+exec
+/usr/bin/zsh -lc "rg -n '"'^!|Warning|Output written'"' Informe/informe_final.log" in /home/jay_c/Documents/Universidad/Opti Avz/Proyecto
+ succeeded in 152ms:
+726:Output written on informe_final.pdf (5 pages, 310446 bytes).
+
+codex
+🤖 Implementación · 🧠 GPT-6 · ⛓️ Agente único · 🛠️ Sin skills adicionales
+
+Reescribí `graficar.py` y `resumen.py`: generan tres PDF, cuatro tablas booktabs con coma decimal y los resúmenes por stdout.
+
+Verifiqué ambos con los CSV disponibles y datos temporales para las ramas faltantes. Confirmé perfiles, tangentes y ancho de 3,5 pulgadas.
+
+El [informe final](Informe/informe_final.pdf) compiló correctamente con LaTeX y BibTeX: 5 páginas.
+
+Las salidas sin CSV quedaron como «pendiente». No inicié ni detuve experimentos.
+
+Observación: el pie de convergencia dice 0,1 %; la tabla usa el 0,5 % solicitado. Dejé intacto el texto del informe.
+tokens used
+52,152
+🤖 Implementación · 🧠 GPT-6 · ⛓️ Agente único · 🛠️ Sin skills adicionales
+
+Reescribí `graficar.py` y `resumen.py`: generan tres PDF, cuatro tablas booktabs con coma decimal y los resúmenes por stdout.
+
+Verifiqué ambos con los CSV disponibles y datos temporales para las ramas faltantes. Confirmé perfiles, tangentes y ancho de 3,5 pulgadas.
+
+El [informe final](Informe/informe_final.pdf) compiló correctamente con LaTeX y BibTeX: 5 páginas.
+
+Las salidas sin CSV quedaron como «pendiente». No inicié ni detuve experimentos.
+
+Observación: el pie de convergencia dice 0,1 %; la tabla usa el 0,5 % solicitado. Dejé intacto el texto del informe.
