@@ -74,6 +74,24 @@ class OraculoJulia:
                 self._pool.put(proc)
         return idx[0]
 
+    def red(self, esc, plantilla):
+        """Recupera los datos CasADi de un escenario creado en el oráculo."""
+        proc = self._pool.get()
+        try:
+            v = np.fromstring(self._pedir(proc, f"RED {esc + 1}"), sep=" ")
+        finally:
+            self._pool.put(proc)
+        e, i = {**plantilla, "dP": v[0]}, 1
+        for k in ("x0", "GL", "pfv", "pb0"):
+            j = i + plantilla[k].size
+            e[k], i = v[i:j], j
+        re, im = np.split(v[i:], 2)
+        red, i = re + 1j * im, 0
+        for k in ("Y", "W", "Z", "Sc"):
+            j = i + plantilla[k].size
+            e[k], i = red[i:j].reshape(plantilla[k].shape, order="F"), j
+        return e
+
     def cerrar(self):
         for proc in self.procs:
             if proc.poll() is None:

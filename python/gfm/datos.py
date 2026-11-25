@@ -1,4 +1,5 @@
 """Carga de parámetros (datos/parametros.toml) y de la red exportada por Julia."""
+import os
 import subprocess
 import tomllib
 from pathlib import Path
@@ -18,10 +19,12 @@ def _leer(ruta):
 
 def cargar():
     """Devuelve (p, c, escenarios): parámetros, constantes del punto de operación y red por escenario."""
-    red = RAIZ / "datos" / "red_exportada.toml"
-    if not red.exists() or red.stat().st_mtime < (RAIZ / "datos" / "parametros.toml").stat().st_mtime:
-        subprocess.run(["julia", "--project=julia", str(Path("julia") / "exportar_red.jl")], cwd=RAIZ, check=True)
-    p, r = _leer(RAIZ / "datos" / "parametros.toml"), _leer(red)
+    carpeta = Path(os.environ.get("GFM_DATOS", RAIZ / "datos")).resolve()
+    parametros, red = carpeta / "parametros.toml", carpeta / "red_exportada.toml"
+    if not red.exists() or red.stat().st_mtime < parametros.stat().st_mtime:
+        subprocess.run(["julia", "--project=julia", str(Path("julia") / "exportar_red.jl")], cwd=RAIZ, check=True,
+                       env={**os.environ, "GFM_DATOS": str(carpeta)})
+    p, r = _leer(parametros), _leer(red)
     c = {k: np.asarray(v) if isinstance(v, list) else v for k, v in r["constantes"].items()}
     esc = []
     for e in r["escenario"]:

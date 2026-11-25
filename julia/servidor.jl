@@ -1,6 +1,7 @@
 # Oráculo de simulación para los optimizadores de Python (protocolo de texto por stdin/stdout).
 #   -> "EVAL <escenario> <lim> θ1 ... θ8"            <- "<métricas...> <g...>"   (lim = 1 con limitador, 0 sin él)
 #   -> "NUEVO <barra> <dP_MW> <SOC1> <SOC2> <Pfv2>"  <- índice del escenario creado
+#   -> "RED <escenario>"                           <- red y estado inicial para linealizar en Python
 #   -> "SALIR"
 include(joinpath(@__DIR__, "src", "GFM5Barras.jl"))
 using .GFM5Barras
@@ -20,6 +21,10 @@ for linea in eachline(stdin)
         push!(escs, s.nuevo_esc(Dict("nombre" => "esc$(length(escs) + 1)", "barra" => Int(v[1]), "dP" => v[2],
                                      "SOC0" => v[3:4], "P_fv2" => v[5])))
         println(length(escs))
+    elseif tok[1] == "RED"
+        e = escs[parse(Int, tok[2])]
+        red = vcat(vec(e.Yred), vec(e.W), vec(e.Z), e.Sc)
+        println(join([e.dP; e.x0; e.GL; e.pfv; e.pb0; real.(red); imag.(red)], " "))
     else
         e = merge(escs[parse(Int, tok[2])], (lim=parse(Float64, tok[3]),))
         m, g = evaluar(s, e, parse.(Float64, tok[4:end]))

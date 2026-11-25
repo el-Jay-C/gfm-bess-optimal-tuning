@@ -1,0 +1,56 @@
+[18:36:48] óptimo de S1_carga_b5: mejor J = 0.61997 (4/6 factibles, 1 en el mejor)
+[18:38:39] óptimo de S2_carga_b4: mejor J = 0.67662 (0/6 factibles, 0 en el mejor)
+[18:43:05] óptimo de S3_FV_baja: mejor J = 0.25422 (6/6 factibles, 5 en el mejor)
+[18:45:01] minmax R: mejor J = 0.64103 (0/5 factibles, 0 en el mejor)
+[18:47:42] esperado R: mejor J = 0.58216 (0/6 factibles, 0 en el mejor)
+[18:48:51] cvar80 R: mejor J = 0.64103 (0/6 factibles, 0 en el mejor)
+At t = 0.87254, mxstep steps taken before reaching tout.
+Traceback (most recent call last):
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/ejecutar_experimentos.py", line 458, in <module>
+    main()
+    ~~~~^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/ejecutar_experimentos.py", line 452, in main
+    {"conv": exp_conv, "modos": exp_modos, "ablacion": exp_ablacion, "pareto": exp_pareto, "barridos": exp_barridos,
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     "robusto": exp_robusto, "malla": exp_malla, "optimos": exp_optimos, "cert": exp_cert}[args.exp]()
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/ejecutar_experimentos.py", line 331, in exp_robusto
+    corr, mejor = multiarranque(pr, semillas, f"{nombre} {modo}")
+                  ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/ejecutar_experimentos.py", line 53, in multiarranque
+    filas = [correr_uno(it) for it in enumerate(ths)]
+             ~~~~~~~~~~^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/ejecutar_experimentos.py", line 44, in correr_uno
+    z = fs.f2_sqp(prob, th0)
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/form_simulacion.py", line 176, in f2_sqp
+    r = minimize(prob.J, z0, method="SLSQP", bounds=prob.cotas, callback=cb,
+                 constraints=[{"type": "ineq", "fun": prob.g}], options={"maxiter": maxiter, "ftol": ftol, "eps": eps})
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/lib64/python3.14/site-packages/scipy/optimize/_minimize.py", line 796, in minimize
+    res = _minimize_slsqp(fun, x0, args, jac, bounds,
+                          constraints, callback=callback, **options)
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/lib64/python3.14/site-packages/scipy/optimize/_slsqp_py.py", line 530, in _minimize_slsqp
+    _eval_constraint(d, x, cons, m, meq)
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/lib64/python3.14/site-packages/scipy/optimize/_slsqp_py.py", line 592, in _eval_constraint
+    temp = np.atleast_1d(con['fun'](x, *con['args'])).ravel()
+                         ~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/form_simulacion.py", line 134, in g
+    partes.append(np.array([(self.zeta(z, s) - self.zeta_min) / self.zeta_min]))
+                             ~~~~~~~~~^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/form_simulacion.py", line 115, in zeta
+    A, _ = linealizar(self.c, {**self.escs[s], "lim": self.lim}, th)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/certificado.py", line 28, in linealizar
+    X = simular(f, e["x0"], th, np.arange(0.0, T_eq + 0.05, 0.1))    # punto de partida cercano al equilibrio
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/python/gfm/modelo.py", line 99, in simular
+    X = np.asarray(F(x0=x0, p=th)["xf"])
+                   ~^^^^^^^^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/lib64/python3.14/site-packages/casadi/casadi.py", line 27230, in __call__
+    return self.call(kwargs)
+           ~~~~~~~~~^^^^^^^^
+  File "/home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv/lib64/python3.14/site-packages/casadi/casadi.py", line 23844, in call
+    return _casadi.Function_call(self, *args)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+RuntimeError: Error in Function::call for 'F' [CvodesInterface] at .../casadi/core/function.cpp:1655:
+Error in Function::call for 'F' [CvodesInterface] at .../casadi/core/function.cpp:514:
+.../casadi/interfaces/sundials/cvodes_interface.cpp:403: CVode returned "CV_TOO_MUCH_WORK". Consult CVODES documentation.

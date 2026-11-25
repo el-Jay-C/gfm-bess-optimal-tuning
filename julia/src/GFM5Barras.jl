@@ -10,7 +10,7 @@ include("modelo.jl")
 include("simulacion.jl")
 
 const RAIZ = normpath(joinpath(@__DIR__, "..", ".."))
-leer_parametros(ruta=joinpath(RAIZ, "datos", "parametros.toml")) = TOML.parsefile(ruta)
+leer_parametros(ruta=joinpath(get(ENV, "GFM_DATOS", joinpath(RAIZ, "datos")), "parametros.toml")) = TOML.parsefile(ruta)
 
 export leer_parametros, construir_sistema, simular, salidas, metricas, evaluar, algebra, rhs!, malla,
        sin_limitador, ilimite, trapz, NG,

@@ -1,0 +1,2 @@
+J* global factible = 0.6313581293; umbral del perfil = 0.6376717106
+Figuras en /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe/figuras

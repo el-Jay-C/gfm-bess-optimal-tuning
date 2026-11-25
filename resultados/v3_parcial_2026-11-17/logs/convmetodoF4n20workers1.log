@@ -1,0 +1,22 @@
+[18:56:43] F4: NLP construido en 373.8 s (14529 variables, 30397 restricciones)
+[18:57:50] F4 corrida 0: 64.9 s, J = 0.62215, violación 6.1e-06
+[18:58:44] F4 corrida 1: 51.0 s, J = 0.62215, violación 6.1e-06
+[19:00:45] F4 corrida 2: 116.9 s, J = 0.62215, violación 6.1e-06
+[19:01:50] F4 corrida 3: 61.6 s, J = 0.62215, violación 6.1e-06
+[19:03:39] F4 corrida 4: 104.7 s, J = 0.62215, violación 6.1e-06
+[19:04:55] F4 corrida 5: 73.0 s, J = 0.62215, violación 6.1e-06
+[19:06:20] F4 corrida 6: 81.0 s, J = 0.62215, violación 6.1e-06
+[19:07:26] F4 corrida 7: 63.2 s, J = 0.62215, violación 6.1e-06
+[19:09:04] F4 corrida 8: 93.5 s, J = 0.62215, violación 6.1e-06
+[19:10:33] F4 corrida 9: 85.0 s, J = 0.62215, violación 6.1e-06
+[19:12:23] F4 corrida 10: 106.0 s, J = 0.62215, violación 6.1e-06
+[19:13:32] F4 corrida 11: 65.8 s, J = 0.62215, violación 6.1e-06
+[19:14:50] F4 corrida 12: 75.6 s, J = 0.62215, violación 6.1e-06
+[19:15:55] F4 corrida 13: 61.9 s, J = 0.62215, violación 6.1e-06
+[19:17:25] F4 corrida 14: 86.6 s, J = 0.62215, violación 6.1e-06
+[19:18:48] F4 corrida 15: 79.0 s, J = 0.65432, violación 0.0e+00
+[19:19:58] F4 corrida 16: 66.6 s, J = 0.62274, violación 2.5e-04
+[19:21:02] F4 corrida 17: 61.5 s, J = 0.62215, violación 6.1e-06
+[19:21:45] F4 corrida 18: 41.5 s, J = 0.65519, violación 6.8e-07
+[19:23:15] F4 corrida 19: 86.9 s, J = 0.62215, violación 6.1e-06
+[19:23:18] Listo: conv

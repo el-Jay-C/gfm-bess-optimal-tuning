@@ -8,7 +8,7 @@ Multiescenario sobre F4 (una sola sintonía θ para todos los escenarios, sin de
 Dos modelos de los límites sostenidos (corriente nominal y potencia nominal del BESS):
     modo "R": restricciones que impiden que el limitador actúe (pb ≤ 1 en todo t, i(T) ≤ I_cont, ϑ(T) ≤ B);
               la dinámica no incluye el limitador.
-    modo "L": el limitador está en la dinámica y esas restricciones se omiten.
+    modo "L": el limitador está en la dinámica y se exige pb(T) ≤ 1.
 En ambos modos se imponen en cada nodo los límites de pico (corriente máxima, corriente y tensión del banco,
 SOC), la banda de tensión, el RoCoF en ventana y el nadir mediante la variable epígrafe z_f ≥ |f(t) - f0|.
 """
@@ -17,6 +17,7 @@ import time
 import casadi as ca
 import numpy as np
 
+from .certificado import zeta
 from .datos import cotas_tension, limites, malla, restricciones_estaticas
 from .modelo import IDX, NX, construir, sensibilidad_tension, simular
 
@@ -76,10 +77,10 @@ def _rk4(f, M):
 
 class ProblemaDirecto:
     """Construye una vez el NLP (CasADi + IPOPT) y lo resuelve desde distintos puntos iniciales.
-    La reserva de energía y eps_V sólo cambian cotas de restricciones; sus barridos reutilizan el solver."""
+    La reserva de energía y cota_V sólo cambian cotas de restricciones; sus barridos reutilizan el solver."""
 
     def __init__(self, p, c, escs, metodo="trapecio", modo="R", hess="exact", M=10, max_iter=1000, tol=1e-6,
-                 agregacion=None, pesos=None, alpha=0.8, factor=1, pesos_J=None, eps_V=None):
+                 agregacion=None, pesos=None, alpha=0.8, factor=1, pesos_J=None, zeta_min=None):
         o, n, b = p["optimizacion"], p["norma"], p["bess"]
         f0 = c["f0"]
         t = malla(p, factor)
@@ -87,12 +88,14 @@ class ProblemaDirecto:
         N, T = len(dt), t[-1]
         escs = [{**e, "lim": 1.0 if modo == "L" else 0.0} for e in escs]
         self.p, self.c, self.escs, self.metodo, self.modo, self.M, self.t = p, c, escs, metodo, modo, M, t
-        self.eps_V = o["eps_V"] if eps_V is None else eps_V
-        self.vdev0 = []
+        self.zeta_min = o["zeta_min"] if zeta_min is None else zeta_min
+        self.t_limite_s = 600.0                              # por solución y presupuesto total de los cortes de ζ
         self.agregacion = agregacion if len(escs) > 1 else None
         wf, wv, wl = (o["wf"], o["wv"], o["wl"]) if pesos_J is None else pesos_J
         lb, ub = limites(p)
+        self.rango_th = ub - lb
         th = ca.MX.sym("th", 8)
+        pz = ca.MX.sym("pz", 9, len(escs))
         w, lbw, ubw = [th], list(lb), list(ub)
         g, lbg, ubg = [], [], []
         self.filas = {}
@@ -115,7 +118,7 @@ class ProblemaDirecto:
         wtrap = np.concatenate([[dt[0] / 2], (dt[:-1] + dt[1:]) / 2, [dt[-1] / 2]])
         Ts = b["T_servicio"]
         self.modelos, Js = [], []
-        for e in escs:
+        for s, e in enumerate(escs):
             f, sal = construir(c, e)
             self.modelos.append((f, sal))
             x0 = ca.DM(e["x0"])
@@ -160,6 +163,7 @@ class ProblemaDirecto:
                     agregar(Isq[N], -np.inf, c["Icont"] ** 2, f"If{i}")
                 else:
                     agregar(pb, -1.0, np.inf)
+                    agregar(pb[N], -np.inf, 1.0, f"pb_sost{i}")
             Vsq = O[[IDX[f"V{k}sq"] for k in range(1, 6)], :]
             agregar(Vsq, n["V_min_normal"] ** 2, n["V_max_normal"] ** 2)
 
@@ -172,12 +176,8 @@ class ProblemaDirecto:
             ubw += [np.inf] * N
             agregar(cv - ca.horzcat(0, cv[:-1]) - (d[:-1] + d[1:]) * ca.DM(dt).T / (2 * 5 * T), 0, 0)
             vdev = cv[N - 1]
-            X0 = simular(f, e["x0"], o["theta_inicial"], t)
-            O0 = np.asarray(sal.map(N + 1)(X0, o["theta_inicial"]))
-            V0 = np.sqrt(O0[[IDX[f"V{k}sq"] for k in range(1, 6)]])
-            self.vdev0.append(float(np.sum(((V0 - c["Vpre"][:, None]) / o["dV_ref"]) ** 2, axis=0)
-                                    @ wtrap / (5 * T)))
-            agregar(vdev, -np.inf, self.eps_V * self.vdev0[-1], "V")
+            agregar(vdev, -np.inf, np.inf, "V")
+            agregar(ca.dot(pz[:8, s], th) - pz[8, s], -np.inf, np.inf, "zeta")
             perd = ca.mtimes(O[IDX["ploss"], :] - c["ploss0"], wtrap) / (T * e["dP"])
             Js.append(wf * zf / o["df_ref"] + wv * vdev + wl * perd)
 
@@ -205,16 +205,20 @@ class ProblemaDirecto:
 
         self.lbw, self.ubw = np.array(lbw), np.array(ubw)
         self.lbg, self.ubg = np.array(lbg), np.array(ubg)
-        nlp = {"x": ca.vertcat(*w), "f": obj, "g": ca.vertcat(*g)}
+        nlp = {"x": ca.vertcat(*w), "f": obj, "g": ca.vertcat(*g), "p": ca.vec(pz)}
         self.nw, self.ng = nlp["x"].numel(), ng
         self.cb = _Registro(self.nw, ng, self.lbg, self.ubg, None)
         # disparo múltiple: la función de intervalo ya es SX; expandir el map completo agota la memoria;
         # en multiescenario (len(escs) > 1) la expansión tarda ~20 min en 1 hilo, por lo que se mantiene MX.
         opts = {"expand": False, "print_time": False, "iteration_callback": self.cb,
-                "ipopt": {"print_level": 0, "tol": tol, "max_iter": max_iter, "max_cpu_time": 300.0,
+                "ipopt": {"print_level": 0, "tol": tol, "max_iter": max_iter, "max_cpu_time": self.t_limite_s,
                           "hessian_approximation": "exact" if hess == "exact" else "limited-memory", "sb": "yes"}}
         t0 = time.perf_counter()
         self.solver = ca.nlpsol("S", "ipopt", nlp, opts)
+        # arranque en caliente (primal y dual) para las vueltas siguientes de los cortes de ζ
+        tibio = {"warm_start_init_point": "yes", "mu_init": 1e-4, "warm_start_bound_push": 1e-6,
+                 "warm_start_mult_bound_push": 1e-6, "warm_start_slack_bound_push": 1e-6}
+        self.solver_tibio = ca.nlpsol("T", "ipopt", nlp, {**opts, "ipopt": {**opts["ipopt"], **tibio}})
         self.t_construccion = time.perf_counter() - t0
 
     def _inicial(self, th0):
@@ -230,10 +234,13 @@ class ProblemaDirecto:
             w0 += list(np.cumsum((d[:-1] + d[1:]) * np.diff(self.t)) / (10 * self.t[-1]))
         return np.array(w0 + [0.6] * self.n_extra)
 
-    def resolver(self, th0, hist=None, reserva=None, eps_V=None):
+    def resolver(self, th0, hist=None, reserva=None, cota_V=None):
         lbg, ubg = self.lbg, self.ubg.copy()
-        if eps_V is not None:
-            ubg[self.filas["V"]] = eps_V * np.array(self.vdev0)
+        if cota_V is not None:
+            cota_V = np.asarray(cota_V, float)
+            if cota_V.shape != (len(self.escs),):
+                raise ValueError("Se necesita una cota de vdev por escenario")
+            ubg[self.filas["V"]] = cota_V
         if reserva is not None:
             hst = restricciones_estaticas(self.p, self.c, self.escs, reserva)[1]
             for i in range(2):
@@ -243,16 +250,46 @@ class ProblemaDirecto:
         t0 = time.perf_counter()
         w0 = self._inicial(np.asarray(th0, float))
         t1 = time.perf_counter()
-        sol = self.solver(x0=w0, lbx=self.lbw, ubx=self.ubw, lbg=lbg, ubg=ubg)
+        pz = np.zeros((9, len(self.escs)))
+        centros = [None] * len(self.escs)
+        pasos = 1e-4 * self.rango_th
+        n_cortes = n_iter = 0
+        log_vueltas = []
+        for vuelta in range(6):
+            solver = self.solver if vuelta == 0 else self.solver_tibio
+            duales = {} if vuelta == 0 else {"lam_x0": sol["lam_x"], "lam_g0": sol["lam_g"]}
+            sol = solver(x0=w0, lbx=self.lbw, ubx=self.ubw, lbg=lbg, ubg=ubg, p=pz.ravel(order="F"), **duales)
+            st = solver.stats()
+            log_vueltas.append((st["iter_count"], st["return_status"], time.perf_counter() - t1))
+            n_iter += st["iter_count"]
+            w0 = np.asarray(sol["x"]).ravel()
+            th = w0[:8]
+            zetas = [zeta(self.c, e, th) for e in self.escs]
+            if not self.zeta_min or vuelta == 5 or time.perf_counter() - t1 > self.t_limite_s:
+                break
+            nuevos = 0
+            for s, (e, zs, centro) in enumerate(zip(self.escs, zetas, centros)):
+                movio = centro is not None and np.max(np.abs(th - centro) / self.rango_th) > 1e-3
+                if zs < self.zeta_min * (1 - 1e-3) or movio:
+                    grad = np.array([(zeta(self.c, e, th + d) - zeta(self.c, e, th - d)) / (2 * h)
+                                     for d, h in zip(np.diag(pasos), pasos)])
+                    pz[:8, s], pz[8, s] = -grad, zs - self.zeta_min - grad @ th
+                    ubg[self.filas["zeta"][s]] = 0.0
+                    centros[s] = th.copy()
+                    nuevos += 1
+            if not nuevos:
+                break
+            n_cortes += nuevos
         t_s = time.perf_counter() - t1
-        st = self.solver.stats()
         lam = np.asarray(sol["lam_g"]).ravel()
-        r = {"th": np.asarray(sol["x"]).ravel()[:8], "J": float(sol["f"]), "estado": st["return_status"],
-             "exito": bool(st["success"]), "iter": st["iter_count"], "t_s": t_s, "t_inicial_s": t1 - t0,
+        r = {"th": th, "J": float(sol["f"]), "estado": st["return_status"], "iter": n_iter,
+             "exito": bool(st["success"] and (not self.zeta_min or min(zetas) >= self.zeta_min * (1 - 1e-3))),
+             "t_s": t_s, "t_inicial_s": t1 - t0, "t_limite_s": self.t_limite_s,
+             "n_cortes": n_cortes, "zeta": zetas, "vueltas": log_vueltas,
              "t_construccion_s": self.t_construccion, "n_var": self.nw, "n_res": self.ng}
         gv = np.asarray(sol["g"]).ravel()
         r["vdev"] = gv[self.filas["V"]].tolist()
-        r["eps"] = ubg[self.filas["V"]].tolist()
+        r["cota_V"] = ubg[self.filas["V"]].tolist()
         for k, filas in self.filas.items():
             if k not in ("est", "R9"):
                 r[f"lam_{k}"] = float(lam[filas].sum())

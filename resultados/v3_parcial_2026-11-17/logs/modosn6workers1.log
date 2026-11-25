@@ -1,0 +1,5 @@
+[19:34:02] modo R: mejor J = 0.61997 (4/6 factibles, 1 en el mejor)
+[19:41:22] modo R F4: Solve_Succeeded J = 0.62306 (Julia 0.62215)
+[19:41:49] modo L: mejor J = 0.48349 (6/6 factibles, 6 en el mejor)
+[19:48:40] modo L F4: Solve_Succeeded J = 0.48397 (Julia 0.48389)
+[19:48:41] Listo: modos

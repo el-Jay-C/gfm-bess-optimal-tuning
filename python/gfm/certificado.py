@@ -66,6 +66,19 @@ def linealizar(c, e, th, T_eq=60.0):
     return np.asarray(J(zeq, pr)), np.max(np.abs(np.asarray(F(zeq, pr))))
 
 
+def zeta(c, e, th):
+    """Amortiguamiento mínimo de los polos del equilibrio post-evento."""
+    try:
+        A, residuo = linealizar(c, e, th)
+        return zeta_polos(np.linalg.eigvals(A), residuo)
+    except (RuntimeError, np.linalg.LinAlgError):
+        return -1.0
+
+
+def zeta_polos(ev, residuo):
+    return float(np.min(-ev.real / np.abs(ev))) if residuo < 1e-6 and np.all(ev != 0) else -1.0
+
+
 def _resolver(pr):
     """Clarabel (punto interior); si falla por mal condicionamiento cerca de la frontera, SCS."""
     for solver, opts in ((cp.CLARABEL, {}), (cp.SCS, {"eps": 1e-7, "max_iters": 50000})):

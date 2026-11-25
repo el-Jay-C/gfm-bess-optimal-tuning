@@ -1,0 +1,198 @@
+
+J* global factible: 0.6313581293; mejor cuenca: J <= 0.6345149199
+F1: 10 corridas, 0 factibles, 0 en mejor cuenca; mediana J factible=nan, t=29.4472 s
+F2: 20 corridas, 20 factibles, 7 en mejor cuenca; mediana J factible=0.661526, t=10.0037 s
+F3: 20 corridas, 14 factibles, 4 en mejor cuenca; mediana J factible=0.656696, t=162.599 s
+F4: 20 corridas, 18 factibles, 16 en mejor cuenca; mediana J factible=0.633569, t=79.3611 s
+F4b: 4 corridas, 3 factibles, 0 en mejor cuenca; mediana J factible=0.730259, t=507.479 s
+F5: 10 corridas, 8 factibles, 3 en mejor cuenca; mediana J factible=0.659855, t=121.1 s
+
+Restricciones activas y multiplicadores (modos.csv)
+modo metodo        J                                                         activas  lam_Imax   lam_ib       lam_E0  lam_pb0      lam_th0      lam_If0   lam_E1  lam_pb1      lam_th1      lam_If1                                           lam_est                lam_R9
+   R     F2 0.631644       pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min       NaN      NaN          NaN      NaN          NaN          NaN      NaN      NaN          NaN          NaN                                               NaN                   NaN
+   R     F4 0.633569             pb1_max E2_serv R9_lento1 R9_lento2 Kq1_min Kq2_min  0.000152 0.000333 1.392140e-11  2.24707 2.634966e-08 5.038960e-07 0.000153 0.000186 2.694535e-08 8.756260e-07 4.384e-10 7.514e-12 2.441e-11 1.475e-08 3.133e-07 -2.933e-03 -2.459e-03
+   L     F2 0.506788 E2_serv R8b_2 R9_lento1 R9_lento2 H1_min Kq1_min Kq2_min D1_max       NaN      NaN          NaN      NaN          NaN          NaN      NaN      NaN          NaN          NaN                                               NaN                   NaN
+   L     F4 0.506789 E2_serv R8b_2 R9_lento1 R9_lento2 H1_min Kq1_min Kq2_min D1_max  0.000163 0.000463 1.789736e-11      NaN          NaN          NaN 0.000098      NaN          NaN          NaN 1.281e-09 7.509e-12 2.441e-11 5.244e-09 3.753e-04 -9.161e-04 -7.248e-04
+
+pesos.csv
+   caso    wv  wl       H1       H2        D1        D2       Kq1       Kq2       K1       K2        J         viol  dfmax_Hz   fmin_Hz     vdev  perdidas  pred1_max  pred2_max  alivio_carga  pb1_pico  pb2_pico   I1_fin   I2_fin                                                   activas  Kq_fijo
+  pesos   0.0 0.1 2.897913 4.097606 27.801827 23.333202 10.000037 10.000000 0.279228 0.277404 0.582717 1.581482e-10  0.577284 49.422716 0.048924  0.054323   0.009213   0.000046      0.108910  1.000000  0.974953 0.905919 0.946656 pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min      NaN
+  pesos   0.1 0.1 2.897534 4.097606 27.801049 23.332948 10.000000 10.000000 0.279206 0.277404 0.587618 5.791016e-09  0.577293 49.422707 0.048925  0.054324   0.009209   0.000046      0.108911  1.000000  0.974989 0.905915 0.946656 pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min      NaN
+  pesos   1.0 0.1 2.897792 4.097606 27.801599 23.333129 10.000000 10.000000 0.279206 0.277404 0.631644 6.515886e-09  0.577287 49.422713 0.048925  0.054323   0.009211   0.000046      0.108911  1.000000  0.974965 0.905918 0.946656 pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min      NaN
+  pesos  10.0 0.1 3.020620 3.750440 24.709826 21.049677 49.999978 49.997936 0.100253 0.423001 0.889980 2.902550e-06  0.646149 49.353851 0.023824  0.055961   0.008889   0.000357      0.080120  1.000003  0.999351 0.909562 0.942391         pb1_max pb2_max E2_serv R9_lento1 Kq1_max Kq2_max      NaN
+  pesos 100.0 0.1 3.013237 3.602736 24.560972 21.007418 49.995811 49.999767 0.198588 0.390328 3.026594 6.836703e-04  0.650837 49.349163 0.023702  0.055997   0.009061   0.000405      0.078324  1.000684  1.000092 0.908781 0.942433                   pb1_max pb2_max E2_serv Kq1_max Kq2_max      NaN
+  pesos   1.0 0.0 2.897975 4.097606 27.801762 23.333171 10.000092 10.000097 0.279205 0.277403 0.626209 2.907702e-11  0.577285 49.422715 0.048924  0.054323   0.009212   0.000046      0.108910  1.000000  0.974948 0.905919 0.946656 pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min      NaN
+  pesos   1.0 1.0 2.897945 4.097606 27.801785 23.333168 10.000317 10.000005 0.279202 0.277404 0.680533 1.427945e-10  0.577285 49.422715 0.048924  0.054323   0.009213   0.000046      0.108910  1.000000  0.974950 0.905919 0.946656 pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min      NaN
+Kq_fijo   1.0 0.1 2.897948 4.097087 27.801665 23.333155 10.000001 10.000001 0.279206 0.277404 0.631647 1.257490e-10  0.577290 49.422710 0.048925  0.054323   0.009212   0.000046      0.108911  1.000000  0.974953 0.905918 0.946656 pb1_max E2_serv R8b_2 R9_lento1 R9_lento2 Kq1_min Kq2_min     10.0
+Kq_fijo   1.0 0.1 2.934988 4.061729 26.012543 22.011186 20.000001 20.000001 0.193055 0.186138 0.652938 6.981988e-10  0.614119 49.385881 0.033299  0.055207   0.008850   0.000121      0.091867  1.000000  0.986920 0.906396 0.944952                       pb1_max E2_serv R9_lento1 R9_lento2     20.0
+Kq_fijo   1.0 0.1 2.955031 4.023072 25.315788 21.495487 30.000001 30.000001 0.147533 0.140058 0.663568 1.911038e-10  0.629956 49.370044 0.028053  0.055593   0.008749   0.000180      0.084722  1.000000  0.992023 0.907490 0.943852                       pb1_max E2_serv R9_lento1 R9_lento2     30.0
+Kq_fijo   1.0 0.1 2.950843 4.025299 24.676468 21.037800 50.000000 50.000000 0.100253 0.093677 0.674018 3.835316e-15  0.644433 49.355567 0.023988  0.055960   0.008466   0.000287      0.078239  1.000000  0.997432 0.909394 0.942384       pb1_max E2_serv R9_lento1 R9_lento2 Kq1_max Kq2_max     50.0
+
+malla.csv
+ factor  nodos  n_var          estado        t_s  t_construccion_s  J_modelo   J_real  viol_real       H1       H2        D1        D2       Kq1       Kq2       K1       K2
+      1    661  14529 Solve_Succeeded  29.755219         12.894508  0.664425 0.663717        0.0 1.662430 1.949357 25.820706 22.692871 10.000048 10.000058 0.279209 0.277406
+      2   1321  29049 Solve_Succeeded 161.412660         32.861907  0.632641 0.632355        0.0 2.867903 4.097587 27.738286 23.312250 10.000051 10.000065 0.279210 0.277408
+      4   2641  58089 Solve_Succeeded 300.870965         79.455005  0.632222 0.632047        0.0 2.884051 4.097580 27.765369 23.321184 10.000052 10.000066 0.279210 0.277408
+
+validacion_densa.csv
+inicial: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min     0.111064    0.111064  0.382969  0.382992     0.366815     0.366838       0.945009       0.945025        0.871156        0.871588
+mean    0.131099    0.131114  0.552903  0.552989     0.531280     0.531367       1.039646       1.039768        0.962409        0.962747
+max     0.144967    0.144967  0.642451  0.642514     0.622709     0.622885       1.097363       1.097650        1.014955        1.014965
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: E2_serv, pb2_max
+F1_articulo: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min    -0.041356   -0.041339  0.384543  0.384544     0.362114     0.362114       0.891038       0.891040        0.883045        0.883048
+mean    0.002347    0.002353  0.555975  0.555976     0.522408     0.522410       0.972545       0.972549        0.977147        0.977148
+max     0.030508    0.030508  0.649016  0.649019     0.613439     0.613441       1.040174       1.040174        1.030508        1.030508
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+opt_R: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min     0.000114    0.000127  0.374332  0.374339     0.352909     0.352917       0.936723       0.936827        0.871206        0.871231
+mean    0.059121    0.059421  0.542988  0.543033     0.511467     0.511512       1.030094       1.030275        0.961188        0.961204
+max     0.105334    0.105639  0.633569  0.633614     0.602327     0.602411       1.091971       1.092149        1.012243        1.012253
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+opt_L: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min     0.088245    0.088247  0.275485  0.275498     0.256032     0.256044       0.934562       0.934576        0.924904        0.924913
+mean    0.096901    0.096911  0.399539  0.399610     0.371565     0.371636       1.026189       1.026489        1.038831        1.038836
+max     0.103344    0.103349  0.468869  0.468923     0.438652     0.438797       1.085976       1.086859        1.103344        1.103349
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+minmax: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min     0.009121    0.009148  0.419652  0.419773     0.397383     0.397504       0.913735       0.913778        0.877171        0.877171
+mean    0.022663    0.023221  0.608122  0.608283     0.574966     0.575128       0.992592       0.992660        0.970605        0.971114
+max     0.033343    0.033493  0.708550  0.708721     0.675739     0.675931       1.040174       1.040184        1.025523        1.027023
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+esperado: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min     0.009121    0.009148  0.419652  0.419773     0.397383     0.397504       0.913735       0.913778        0.877171        0.877171
+mean    0.022663    0.023221  0.608122  0.608283     0.574966     0.575128       0.992592       0.992660        0.970605        0.971114
+max     0.033344    0.033493  0.708550  0.708721     0.675739     0.675931       1.040174       1.040184        1.025523        1.027023
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+cvar80: 3 filas
+      viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min     0.009127    0.009153  0.419648  0.419769     0.397379     0.397500       0.913733       0.913776        0.877174        0.877174
+mean    0.022664    0.023223  0.608116  0.608277     0.574961     0.575122       0.992590       0.992658        0.970610        0.971119
+max     0.033336    0.033486  0.708544  0.708714     0.675732     0.675924       1.040174       1.040184        1.025529        1.027029
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+afin_minmax: 3 filas
+        viol_malla  viol_densa   J_malla   J_densa  dfmax_malla  dfmax_densa  I2_pico_malla  I2_pico_densa  pb1_pico_malla  pb1_pico_densa
+min  -3.199668e-02   -0.031904  0.301793  0.301804     0.283616     0.283627       0.891700       0.891717        0.957621        0.957621
+mean -1.265840e-02   -0.011764  0.557053  0.557065     0.525466     0.525478       1.000676       1.000948        0.983881        0.984001
+max   1.228366e-10    0.002523  0.691396  0.691403     0.657872     0.657889       1.069490       1.070247        1.000000        1.000293
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+  restriccion_peor: pb1_max, pb2_max
+
+largo_plazo.csv
+inicial: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac     pred1_max  pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax    t_fmin  df_segundo_descenso
+min   49.553370  49.553753  0.801033  0.877397  0.804695  0.677892  3.272938e-26  9.135875e-15  3.214175e-08   0.002854            0.5  2424.961739  2420.430920     2426.541432     2422.010466  0.385273  1.350000         8.526513e-14
+mean  49.618759  49.619081  0.859454  0.940297  0.864529  0.764626  1.298231e-06  5.990001e-02  3.472667e-03   0.014623            0.5  3508.259005  3511.749504     3510.747101     3514.242470  0.542192  1.483333         9.947598e-14
+max   49.736572  49.736777  0.893281  0.978051  0.897604  0.917918  2.054338e-06  1.125223e-01  7.544247e-03   0.031562            0.5  4106.995418  4118.094793     4109.954772     4121.061295  0.633587  1.750000         1.065814e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+F1_articulo: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac     pred1_max     pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax    t_fmin  df_segundo_descenso
+min   49.556832  49.557180  0.817814  0.852341  0.823812  0.539376  9.485303e-25  1.343928e-21  1.165193e-07  3.587077e-14          0.750  2768.742145  1924.562525     2770.846997     1926.023573  0.362110  0.950000         8.526513e-14
+mean  49.622337  49.622645  0.884837  0.903085  0.891945  0.643998  2.065757e-04  4.997522e-04  1.793382e-02  1.811121e-05          0.825  4000.658471  2784.736634     4003.513264     2786.725002  0.528405  1.066667         1.065814e-13
+max   49.738668  49.738895  0.919684  0.933014  0.930206  0.835120  3.298209e-04  1.488833e-03  3.314350e-02  5.433225e-05          0.900  4691.581221  3269.979370     4694.792554     3272.223036  0.624961  1.150000         1.207923e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+opt_R: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac     pred1_max  pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax  t_fmin  df_segundo_descenso
+min   49.566810  49.567171  0.808937  0.866169  0.814435  0.611619  1.316098e-25  1.527456e-15  6.303982e-08   0.000081          0.850  2600.221835  2188.967822     2602.049530     2190.458428  0.366084     1.4         7.105427e-14
+mean  49.630882  49.631193  0.871986  0.923007  0.878408  0.707671  8.525241e-07  2.334254e-02  6.983787e-03   0.007947          1.125  3758.275091  3169.863323     3760.954406     3172.050027  0.518955     1.4         1.018445e-13
+max   49.744623  49.744836  0.905133  0.956330  0.914349  0.879092  1.561458e-06  4.647677e-02  1.427089e-02   0.018798          1.400  4408.484329  3722.808064     4411.599292     3725.351790  0.609530     1.4         1.350031e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+opt_L: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac  pred1_max  pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax  t_fmin  df_segundo_descenso
+min   49.658022  49.658200  0.859420  0.863139  0.869514  0.611118  4.430933e-18  3.726442e-16   0.000012   0.000019       0.500000  3591.128382  2144.024005     3594.720223     2146.058668  0.262442    0.95         0.000000e+00
+mean  49.711834  49.712032  0.937866  0.921659  0.950400  0.707349  1.351972e-02  3.422569e-02   0.089613   0.004693       0.516667  5038.569847  3169.748261     5040.049145     3171.560108  0.401252    1.55         1.515825e-13
+max   49.804318  49.804539  0.979841  0.956918  0.993215  0.872011  2.172832e-02  7.190771e-02   0.146624   0.010909       0.550000  5804.307437  3767.003870     5804.548086     3768.623740  0.484106    1.85         4.121148e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+minmax: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac     pred1_max     pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax  t_fmin  df_segundo_descenso
+min   49.531685  49.532030  0.800179  0.858288  0.804639  0.569052  2.550267e-26  5.286829e-19  2.531366e-08  6.184205e-10            1.4  2423.341044  2035.250932     2424.891322     2036.552903  0.399955    1.15         4.973799e-14
+mean  49.600915  49.601211  0.859317  0.911685  0.864185  0.670192  5.397438e-05  8.744007e-03  5.002274e-03  1.376960e-03            1.4  3502.643284  2944.453299     3504.863256     2946.317715  0.578920    1.15         8.763360e-14
+max   49.723813  49.724020  0.890851  0.943104  0.897630  0.853275  1.474905e-04  2.001968e-02  1.044550e-02  4.130853e-03            1.4  4108.470100  3457.256521     4111.050379     3459.423661  0.682286    1.15         1.136868e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+esperado: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac     pred1_max     pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax  t_fmin  df_segundo_descenso
+min   49.531685  49.532030  0.800179  0.858288  0.804639  0.569053  2.550197e-26  5.286975e-19  2.531351e-08  6.184417e-10            1.4  2423.340326  2035.251158     2424.890603     2036.553128  0.399955    1.15         5.684342e-14
+mean  49.600915  49.601211  0.859317  0.911685  0.864185  0.670192  5.397140e-05  8.744037e-03  5.002235e-03  1.376971e-03            1.4  3502.642248  2944.453628     3504.862219     2946.318044  0.578920    1.15         2.747432e-13
+max   49.723813  49.724020  0.890851  0.943104  0.897630  0.853275  1.474824e-04  2.001973e-02  1.044542e-02  4.130886e-03            1.4  4108.468888  3457.256908     4111.049166     3459.424048  0.682286    1.15         5.755396e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+cvar80: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac     pred1_max     pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax  t_fmin  df_segundo_descenso
+min   49.531689  49.532033  0.800182  0.858288  0.804642  0.569049  2.552733e-26  5.283337e-19  2.532085e-08  6.178185e-10            1.4  2423.387386  2035.236280     2424.937724     2036.538268  0.399950    1.15         8.526513e-14
+mean  49.600917  49.601214  0.859321  0.911684  0.864189  0.670188  5.404441e-05  8.742612e-03  5.003825e-03  1.376602e-03            1.4  3502.710210  2944.432054     3504.930253     2946.296481  0.578915    1.15         1.089499e-13
+max   49.723815  49.724022  0.890855  0.943103  0.897634  0.853273  1.476747e-04  2.001707e-02  1.044843e-02  4.129781e-03            1.4  4108.548500  3457.231567     4111.128854     3459.398713  0.682281    1.15         1.350031e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+afin_minmax: 3 filas
+           f_30       f_Ts     I1_Ts     I2_Ts    pb1_Ts    pb2_Ts      th1_frac      th2_frac  pred1_max     pred2_max  t_limitador_s   E1_Ts_real   E2_Ts_real  E1_extrapolada  E2_extrapolada     dfmax  t_fmin  df_segundo_descenso
+min   49.533167  49.533511  0.870533  0.840479  0.879966  0.591312  1.452787e-14  1.138650e-22   0.000071  1.392628e-07            NaN  3782.216778  1724.935724     3785.824607     1726.556396  0.283260    0.85         7.815970e-14
+mean  49.622614  49.622919  0.878878  0.910483  0.885157  0.668319  4.845058e-08  1.877513e-02   0.002067  1.045211e-04            NaN  3881.728977  2933.133022     3884.509692     2935.078819  0.526573    1.55         1.184238e-13
+max   49.785974  49.786209  0.885134  0.950315  0.891324  0.802343  1.092608e-07  3.875529e-02   0.004251  3.013488e-04            NaN  3996.154913  3597.760318     3998.553645     3599.896833  0.660482    1.90         1.421085e-13
+  escenario: S1_carga_b5, S2_carga_b4, S3_FV_baja
+
+escalon_tension.csv
+inicial: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.008           0.1570               0.2270             0.505572
+mean  1.5         0.008           0.1585               0.2285             0.619938
+max   2.0         0.008           0.1600               0.2300             0.734304
+F1_articulo: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.242            4.768               6.3410                  0.0
+mean  1.5         0.242            4.769               6.3425                  0.0
+max   2.0         0.242            4.770               6.3440                  0.0
+opt_R: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.043             0.88               1.1840             0.439996
+mean  1.5         0.043             0.88               1.1885             0.479266
+max   2.0         0.043             0.88               1.1930             0.518536
+opt_L: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0        0.0430           0.8840               1.1920             0.348225
+mean  1.5        0.0435           0.8845               1.1965             0.356460
+max   2.0        0.0440           0.8850               1.2010             0.364695
+minmax: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.043            0.881               1.1810             0.457474
+mean  1.5         0.043            0.884               1.1835             0.492006
+max   2.0         0.043            0.887               1.1860             0.526537
+esperado: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.043            0.881               1.1810             0.457474
+mean  1.5         0.043            0.884               1.1835             0.492006
+max   2.0         0.043            0.887               1.1860             0.526537
+cvar80: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.043            0.881               1.1810             0.457469
+mean  1.5         0.043            0.884               1.1835             0.492001
+max   2.0         0.043            0.887               1.1860             0.526533
+afin_minmax: 2 filas
+      gfm  t_reaccion_s  t_crecimiento_s  t_establecimiento_s  sobreoscilacion_pct
+min   1.0         0.043            0.875               1.1820             0.471849
+mean  1.5         0.043            0.877               1.1855             0.520226
+max   2.0         0.043            0.879               1.1890             0.568603
+
+certificados.csv (amortiguamiento y Lyapunov común)
+   sintonia  zeta_S1_carga_b5  alpha_S1_carga_b5  residuo_S1_carga_b5  zeta_S2_carga_b4  alpha_S2_carga_b4  residuo_S2_carga_b4  zeta_S3_FV_baja  alpha_S3_FV_baja  residuo_S3_FV_baja  zeta_min  alpha_eig_min  alpha_LMI_comun  zeta_LMI_S1
+    inicial          0.077362           0.214030         2.539635e-13          0.077450           0.213989         2.914335e-13         0.077191          0.213791        1.290634e-13  0.077191       0.213791         0.212956     0.077020
+F1_articulo          0.234060           0.215961         3.608225e-13          0.233935           0.215970         2.900458e-13         0.233800          0.215247        8.881784e-14  0.233800       0.215247         0.214406     0.233932
+      opt_R          0.061342           0.215324         3.706757e-12          0.061391           0.215369         6.693257e-12         0.061208          0.214799        2.636780e-14  0.061208       0.214799         0.213960     0.060451
+      opt_L          0.082780           0.190542         2.191997e-11          0.082810           0.190553         2.079309e-11         0.082641          0.190203        3.480549e-12  0.082641       0.190203         0.189460     0.081893
+     minmax          0.120778           0.223264         1.221245e-13          0.120702           0.223316         1.290634e-13         0.120430          0.222683        5.689893e-14  0.120430       0.222683         0.221813     0.119902
+   esperado          0.120778           0.223264         1.262879e-13          0.120702           0.223316         1.165734e-13         0.120430          0.222683        7.840950e-14  0.120430       0.222683         0.221813     0.119902
+     cvar80          0.120779           0.223263         1.706968e-13          0.120704           0.223315         8.049117e-14         0.120431          0.222682        8.326673e-14  0.120431       0.222682         0.221812     0.119902
+afin_minmax          0.048192           0.226322         1.804112e-14          0.048237           0.226382         3.133604e-12         0.170966          0.195525        1.039446e-12  0.048192       0.195525             -inf     0.047781
+
+Tablas en /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Informe/tablas
