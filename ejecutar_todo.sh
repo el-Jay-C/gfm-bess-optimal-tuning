@@ -44,7 +44,7 @@ correr() {
 export -f ruta_log termino correr
 fase1=("rango --problema L_todos --n 6" "rango --problema L_S1 --n 6" "rango --problema R_S3 --n 6")
 # xargs reparte en este orden: primero la comparación de convergencia (F4, F2, F1)
-fase2=("conv --metodo F4 --n 20" "conv --metodo F2 --n 20" "conv --metodo F1 --n 20" "robusto --n 3"
+fase2=("conv --metodo F4 --n 20" "conv --metodo F2 --n 20" "conv --metodo F1 --n 5" "robusto --n 3"
        "barridos --n 3" "ablacion --n 4" "modos --n 6" "pareto --n 4" "fase1 --n 6")
 for caso in klim1 klim4 kp0 kp1 fracP0 fracP1 Kqmin5 nsep3 nsep8; do
   fase2+=("sens --caso $caso --n 2")
