@@ -23,7 +23,7 @@ lineas = [
 # Consumos por barra (MW, Mvar) del sistema de Stagg y El-Abiad, modelados como impedancia constante.
 carga_P = [0.0, 20.0, 45.0, 40.0, 60.0]
 carga_Q = [0.0, 10.0, 15.0, 5.0, 10.0]
-frac_P = 0.0               # fracción de la carga (y del escalón) a potencia constante; el resto, impedancia constante
+frac_P = 0.5               # fracción de la carga (y del escalón) a potencia constante; el resto, impedancia constante
 V_slack = 1.04     # pu, barra 1 (máquina síncrona). Consignas escalonadas (1,04 / 1,025 / 1,015) para que la
                    # potencia reactiva se reparta entre las tres fuentes sin circulación entre ellas.
 
@@ -120,7 +120,7 @@ dV_ref = 0.05              # pu
 # La contingencia de diseño es de 50 MW, la misma que fija el requisito de inercia (R7).
 [[escenario]]
 nombre = "S1_carga_b5"
-prob = 0.5
+prob = 0.45
 barra = 5
 dP = 50.0
 SOC0 = [0.5, 0.5]
@@ -128,7 +128,7 @@ P_fv2 = 45.0
 
 [[escenario]]
 nombre = "S2_carga_b4"
-prob = 0.3
+prob = 0.25
 barra = 4
 dP = 50.0
 SOC0 = [0.5, 0.5]
@@ -141,3 +141,11 @@ barra = 5
 dP = 30.0
 SOC0 = [0.2, 0.2]
 P_fv2 = 35.0
+
+[[escenario]]             # caso duro: contingencia de diseño con la batería baja
+nombre = "S4_SOC_bajo"
+prob = 0.1
+barra = 5
+dP = 50.0
+SOC0 = [0.2, 0.2]
+P_fv2 = 45.0

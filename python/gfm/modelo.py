@@ -8,7 +8,7 @@ import numpy as np
 
 NG = 9
 NX = 4 + 2 * NG
-N_PF = 12                      # iteraciones de punto fijo de la carga a potencia constante (igual en Julia)
+N_PF = 8                      # iteraciones de punto fijo de la carga a potencia constante (igual en Julia)
 SALIDAS = ["f_sg", "f1", "f2", "I1sq", "I2sq", "ib1", "ib2", "vbat1", "vbat2", "pb1", "pb2",
            "SOC1", "SOC2", "E1", "E2", "V1sq", "V2sq", "V3sq", "V4sq", "V5sq", "ploss", "p1", "p2",
            "th1", "th2", "pred1", "pred2"]

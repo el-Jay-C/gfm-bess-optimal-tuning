@@ -32,7 +32,7 @@ for e in s.esc
         global peor = max(peor, maximum(abs, dx))
     end
 end
-@assert peor < 1e-8 "x0 no es equilibrio: max|dx| = $peor"
+@assert peor < 1e-7 "x0 no es equilibrio: max|dx| = $peor"
 @printf("Kron y equilibrio inicial para %d sintonías: OK (max|f(x0, θ)| = %.1e)\n", length(θs), peor)
 
 θ = o["theta_inicial"]

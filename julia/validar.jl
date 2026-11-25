@@ -127,7 +127,7 @@ escs_m = [s.nuevo_esc(d) for d in muestras]
 pares_fm = [(k, j) for k in 1:N for j in eachindex(sint)]
 lin_fm = Vector{String}(undef, length(pares_fm))
 i_pred1, i_pred2 = im("pred1_max"), im("pred2_max")
-cols_duro = findall(n -> n in ("I1_max", "I2_max", "df_max", "rocof", "V_banda") ||
+cols_duro = findall(n -> n in ("I1_max", "I2_max", "df_max", "rocof", "V_min", "V_max") ||
                        startswith(n, "ib") || startswith(n, "vbat") || startswith(n, "SOC"), NOMBRES_G)
 Threads.@threads for idx in eachindex(pares_fm)
     k, j = pares_fm[idx]

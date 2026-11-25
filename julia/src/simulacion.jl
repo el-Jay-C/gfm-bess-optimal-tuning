@@ -3,7 +3,7 @@
 # Restricciones g ≤ 0, todas normalizadas por su límite (violación relativa).
 const NOMBRES_G = ["I1_max", "I2_max", "th1", "th2", "I1_fin", "I2_fin", "ib1_max", "ib2_max",
                    "vbat1_min", "vbat2_min", "pb1_max", "pb2_max", "df_max", "rocof",
-                   "V_banda", "E1_serv", "E2_serv", "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max", "pb1_sost", "pb2_sost"]
+                   "V_min", "V_max", "E1_serv", "E2_serv", "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max", "pb1_sost", "pb2_sost"]
 const NOMBRES_M = ["J", "dfmax_Hz", "fmin_Hz", "t_fmin_s", "vdev", "perdidas", "vdev_paper", "p1_max", "p2_max",
                    "rocof_Hz_s", "V_min", "V_max", "I1_pico", "I2_pico", "I1_fin", "I2_fin", "th1_frac", "th2_frac",
                    "E1_serv_MWs", "E2_serv_MWs", "pred1_max", "pred2_max", "f_fin_Hz",
@@ -79,7 +79,7 @@ function metricas(s, e, t, X)
          1 - minimum(col(:vbat1)) / b["v_min"], 1 - minimum(col(:vbat2)) / b["v_min"],
          maximum(abs, col(:pb1)) - 1, maximum(abs, col(:pb2)) - 1,
          dfmax / (s.f0 - n["f_min_perm"]) - 1, rocof / n["rocof_max"] - 1,
-         maximum(abs.(Vb .- 1)) / (n["V_max_normal"] - 1) - 1,
+         (1 - minimum(Vb)) / (1 - n["V_min_normal"]) - 1, (maximum(Vb) - 1) / (n["V_max_normal"] - 1) - 1,
          Eserv[1] / s.Eres[1] - 1, Eserv[2] / s.Eres[2] - 1,
          b["SOC_min"] - minimum(col(:SOC1)), b["SOC_min"] - minimum(col(:SOC2)),
          maximum(col(:SOC1)) - b["SOC_max"], maximum(col(:SOC2)) - b["SOC_max"],

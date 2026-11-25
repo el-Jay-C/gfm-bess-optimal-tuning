@@ -13,7 +13,7 @@
 
 const NG = 9                     # estados por GFM
 const NX = 4 + 2NG
-const N_PF = 12                  # iteraciones de punto fijo de la carga a potencia constante (igual en CasADi)
+const N_PF = 8                  # iteraciones de punto fijo de la carga a potencia constante (igual en CasADi)
 igfm(i) = 4 + NG * (i - 1)
 
 "Absoluto suave (para la eficiencia de carga, idéntico en Julia y CasADi)."
@@ -97,22 +97,25 @@ end
 "Límite de corriente vigente según el presupuesto térmico consumido ϑ."
 ilimite(ϑ, s) = s.Icont + (s.Imax - s.Icont) * sigm((s.mth * s.B - ϑ) / (s.ath * s.B))
 
+"Producto matriz-vector como tupla (sin reservar memoria: se llama en cada paso del integrador)."
+por(A, v::NTuple{M}, ::Val{N}) where {M,N} = ntuple(k -> sum(ntuple(j -> @inbounds(A[k, j] * v[j]), Val(M))), Val(N))
+
 "Variables algebraicas (red + convertidor + banco) para un estado x."
 function algebra(x, s, e)
-    T = eltype(x)
-    E = Complex{T}[s.Eg * cis(x[1]); [x[igfm(i)+3] * cis(x[igfm(i)+1]) for i in 1:2]]
-    V = e.W * E
-    Iiny = zeros(Complex{T}, length(V))
-    if any(!iszero, e.Sc)                                    # carga a potencia constante: punto fijo en V
+    E = (s.Eg * cis(x[1]), x[igfm(1)+3] * cis(x[igfm(1)+1]), x[igfm(2)+3] * cis(x[igfm(2)+1]))
+    Sc = ntuple(k -> @inbounds(e.Sc[k]), Val(5))
+    Vz = por(e.W, E, Val(5))
+    V, Iiny = Vz, zero.(Vz)
+    if any(!iszero, Sc)                                      # carga a potencia constante: punto fijo en V
         for _ in 1:N_PF
-            Iiny = -conj.(e.Sc ./ V)
-            V = e.W * E + e.Z * Iiny
+            Iiny = .-conj.(Sc ./ V)
+            V = Vz .+ por(e.Z, Iiny, Val(5))
         end
     end
-    I = e.Yred * E - transpose(e.W) * Iiny
+    I = por(e.Yred, E, Val(3)) .- por(transpose(e.W), Iiny, Val(3))
     Sint = E .* conj.(I)
     pg = real(Sint[1]) * s.Sb / s.Sg
-    out = map(1:2) do i
+    out = ntuple(Val(2)) do i
         k, f = igfm(i), s.Sb / s.S[i]
         Ii = I[i+1]
         Vt = E[i+1] - im * s.Xf[i] * Ii

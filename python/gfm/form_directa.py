@@ -164,7 +164,14 @@ class ProblemaDirecto:
             agregar(Vsq, n["V_min_normal"] ** 2, n["V_max_normal"] ** 2)
 
             dV = (ca.sqrt(Vsq) - ca.repmat(ca.DM(c["Vpre"]), 1, N + 1)) / o["dV_ref"]
-            vdev = ca.mtimes(ca.sum1(dV ** 2), wtrap) / (5 * T)
+            # vdev acumulado como variable por nodo: una sola fila densa arruinaría el coloreo del jacobiano
+            d = ca.sum1(dV ** 2)
+            cv = ca.MX.sym("cv", 1, N)
+            w.append(cv.T)
+            lbw += [-np.inf] * N
+            ubw += [np.inf] * N
+            agregar(cv - ca.horzcat(0, cv[:-1]) - (d[:-1] + d[1:]) * ca.DM(dt).T / (2 * 5 * T), 0, 0)
+            vdev = cv[N - 1]
             X0 = simular(f, e["x0"], o["theta_inicial"], t)
             O0 = np.asarray(sal.map(N + 1)(X0, o["theta_inicial"]))
             V0 = np.sqrt(O0[[IDX[f"V{k}sq"] for k in range(1, 6)]])
@@ -203,7 +210,7 @@ class ProblemaDirecto:
         self.cb = _Registro(self.nw, ng, self.lbg, self.ubg, None)
         # disparo múltiple: la función de intervalo ya es SX; expandir el map completo agota la memoria;
         # en multiescenario (len(escs) > 1) la expansión tarda ~20 min en 1 hilo, por lo que se mantiene MX.
-        opts = {"expand": metodo == "trapecio" and len(escs) == 1, "print_time": False, "iteration_callback": self.cb,
+        opts = {"expand": False, "print_time": False, "iteration_callback": self.cb,
                 "ipopt": {"print_level": 0, "tol": tol, "max_iter": max_iter, "max_cpu_time": 300.0,
                           "hessian_approximation": "exact" if hess == "exact" else "limited-memory", "sb": "yes"}}
         t0 = time.perf_counter()
@@ -218,6 +225,9 @@ class ProblemaDirecto:
             Og = np.asarray(sal.map(Xg.shape[1])(Xg, th0))
             w0 += list((Xg[:, 1:] if self.metodo == "trapecio" else Xg[:, self.M::self.M]).ravel(order="F"))
             w0.append(float(np.max(np.abs(Og[self.fidx] - self.c["f0"]))))
+            V = np.sqrt(Og[[IDX[f"V{k}sq"] for k in range(1, 6)]])
+            d = np.sum(((V - self.c["Vpre"][:, None]) / self.p["optimizacion"]["dV_ref"]) ** 2, axis=0)
+            w0 += list(np.cumsum((d[:-1] + d[1:]) * np.diff(self.t)) / (10 * self.t[-1]))
         return np.array(w0 + [0.6] * self.n_extra)
 
     def resolver(self, th0, hist=None, reserva=None, eps_V=None):

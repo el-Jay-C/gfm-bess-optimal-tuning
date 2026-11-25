@@ -21,7 +21,7 @@ GRUPOS = {"R2": ["df_max", "rocof"],
           "R4": ["ib1_max", "ib2_max", "vbat1_min", "vbat2_min", "pb1_max", "pb2_max",
                  "pb1_sost", "pb2_sost", "SOC1_min", "SOC2_min", "SOC1_max", "SOC2_max"],
           "R5": ["E1_serv", "E2_serv"],
-          "R6": ["V_banda"]}
+          "R6": ["V_min", "V_max"]}
 SOSTENIDAS = {"th1", "th2", "I1_fin", "I2_fin", "pb1_max", "pb2_max"}     # en modo L las maneja el limitador
 FILAS_EST = {"R7": [0], "R8": [1, 2, 3, 4], "R11": [5, 6]}
 
