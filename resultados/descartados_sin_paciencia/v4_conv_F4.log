@@ -1,0 +1,4 @@
+<frozen site>:101: RuntimeWarning: Unexpected value in sys.prefix, expected /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv, got /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/../Codigos/.venv
+<frozen site>:101: RuntimeWarning: Unexpected value in sys.exec_prefix, expected /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv, got /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/../Codigos/.venv
+[17:55:55] F4: NLP construido en 6.5 s (15189 variables, 31056 restricciones)
+[18:02:25] F4 corrida 0: 371.5 s, J = 0.55351, violación 3.0e-05

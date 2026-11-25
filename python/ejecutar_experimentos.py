@@ -34,6 +34,7 @@ from gfm.historial import Historial  # noqa: E402
 from gfm.oraculo import OraculoJulia  # noqa: E402
 
 TH = datos.NOMBRES_THETA
+PACIENCIA = 5                            # early stopping de F2 y F4: iteraciones sin mejora antes de parar
 TOL_FACT = 1e-3                          # violación relativa máxima para considerar factible una sintonía
 p = c = esc = R = ab = args = None
 WORKERS = 1
@@ -387,8 +388,10 @@ def exp_conv():
                 if met == "F1":
                     th = fs.f1_paper(orac, p, c, 0, h, semilla=k, th0=th0)
                 else:
-                    th = ref.theta(fs.f2_sqp(ref, th0, h) if met == "F2" else fs.f3_pso(ref, h, semilla=k, th0=th0))
-                cerrar(h, k, th, h.t, n_eval=orac.n_eval, t_solver_s=h.t)
+                    th = ref.theta(fs.f2_sqp(ref, th0, h, paciencia=PACIENCIA) if met == "F2"
+                                   else fs.f3_pso(ref, h, semilla=k, th0=th0))
+                cerrar(h, k, th, h.t, n_eval=orac.n_eval, t_solver_s=h.t,
+                       paciencia=PACIENCIA if met == "F2" else None)
         else:
             if len(hechas.intersection(range(len(ths)))) == len(ths):
                 return
@@ -400,10 +403,10 @@ def exp_conv():
                 if k in hechas:
                     continue
                 h = Historial(met, k, e0)
-                r = P.resolver(th0, h, cota_V=cv)
+                r = P.resolver(th0, h, cota_V=cv, paciencia=PACIENCIA)
                 cerrar(h, k, r["th"], r["t_inicial_s"] + r["t_s"], t_solver_s=r["t_s"], t_inicial_s=r["t_inicial_s"],
                        t_construccion_s=r["t_construccion_s"], n_var=r["n_var"], n_res=r["n_res"],
-                       estado=r["estado"], exito=r["exito"], J_modelo=r["J"], zeta=r["zeta"][0],
+                       estado=r["estado"], exito=r["exito"], J_modelo=r["J"], zeta=r["zeta"][0], paciencia=PACIENCIA,
                        n_cortes=r["n_cortes"], lam_zeta=r["lam_zeta"], t_limite_s=r["t_limite_s"])
 
 

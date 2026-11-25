@@ -166,23 +166,43 @@ class ProblemaCN:
         return nombres
 
 
-def f2_sqp(prob, th0, hist=None, maxiter=200, ftol=1e-8, eps=1e-4, z0=None):
-    """SQP (SLSQP: subproblema cuadrático con Hessiano BFGS, gradientes por diferencias finitas)."""
+class _Paciencia(Exception):
+    """Parada anticipada (como early stopping en entrenamiento): sin mejora real en `paciencia` iteraciones."""
+
+
+def f2_sqp(prob, th0, hist=None, maxiter=200, ftol=1e-8, eps=1e-4, z0=None, paciencia=None, mejora_min=1e-4):
+    """SQP (SLSQP: subproblema cuadrático con Hessiano BFGS, gradientes por diferencias finitas).
+    paciencia: parada si el mejor J factible no baja `mejora_min` en esas iteraciones; devuelve el mejor punto."""
     z0 = prob.z_de(th0) if z0 is None else z0
     if prob.n_extra:                                    # variables auxiliares factibles en el punto inicial
         Js = np.array([prob.J_esc(z0, s) for s in range(len(prob.idx))])
         z0[prob.dim - prob.n_extra] = Js.max() if prob.agregacion == "minmax" else Js.mean()
         if prob.agregacion == "cvar":
             z0[prob.dim - prob.n_extra + 1:] = np.maximum(Js - Js.mean(), 0)
+    mejor, sin = {"J": np.inf, "z": None}, [0]
 
     def cb(z):
+        J, v = prob.J_real(z), prob.viol(z)
         if hist is not None:
-            hist.registrar(prob.J_real(z), prob.viol(z), prob.theta(z), prob.orac.n_eval)
+            hist.registrar(J, v, prob.theta(z), prob.orac.n_eval)
+        if paciencia:
+            if v <= 1e-3 and J < mejor["J"] - mejora_min:
+                mejor.update(J=J, z=np.array(z, float))
+                sin[0] = 0
+            else:
+                sin[0] += 1
+            if sin[0] >= paciencia and mejor["z"] is not None:
+                raise _Paciencia()
 
     cb(z0)
-    r = minimize(prob.J, z0, method="SLSQP", bounds=prob.cotas, callback=cb,
-                 constraints=[{"type": "ineq", "fun": prob.g}], options={"maxiter": maxiter, "ftol": ftol, "eps": eps})
-    return r.x
+    try:
+        r = minimize(prob.J, z0, method="SLSQP", bounds=prob.cotas, callback=cb,
+                     constraints=[{"type": "ineq", "fun": prob.g}],
+                     options={"maxiter": maxiter, "ftol": ftol, "eps": eps})
+        z = r.x
+    except _Paciencia:
+        z = mejor["z"]
+    return mejor["z"] if paciencia and mejor["z"] is not None else z
 
 
 def f3_pso(prob, hist=None, semilla=0, n_part=24, n_iter=250, rho=1e4, th0=None):

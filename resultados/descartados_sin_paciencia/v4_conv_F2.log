@@ -1,0 +1,7 @@
+<frozen site>:101: RuntimeWarning: Unexpected value in sys.prefix, expected /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv, got /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/../Codigos/.venv
+<frozen site>:101: RuntimeWarning: Unexpected value in sys.exec_prefix, expected /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos/.venv, got /home/jay_c/Documents/Universidad/Opti Avz/Proyecto/Codigos_final/../Codigos/.venv
+[17:59:03] F2 corrida 0: 192.8 s, J = 0.55333, violación 5.9e-12
+[17:59:46] F2 corrida 1: 43.4 s, J = 0.55302, violación 2.4e-09
+[18:00:34] F2 corrida 2: 47.1 s, J = 0.55334, violación 7.8e-10
+[18:00:50] F2 corrida 3: 16.6 s, J = 0.55354, violación 4.8e-09
+[18:01:25] F2 corrida 4: 34.6 s, J = 0.55302, violación 3.0e-12

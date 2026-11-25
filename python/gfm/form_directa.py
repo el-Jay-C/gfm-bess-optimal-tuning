@@ -22,6 +22,10 @@ from .datos import cotas_tension, limites, malla, restricciones_estaticas
 from .modelo import IDX, NX, construir, sensibilidad_tension, simular
 
 
+class _Paciencia(Exception):
+    """Parada anticipada: sin mejora real durante `paciencia` iteraciones; se restaura el mejor punto."""
+
+
 class _Registro(ca.Callback):
     """Callback de iteración de IPOPT: guarda tiempo, objetivo, violación primal y θ."""
 
@@ -29,6 +33,12 @@ class _Registro(ca.Callback):
         ca.Callback.__init__(self)
         self.nw, self.ng, self.lbg, self.ubg, self.hist = nw, ng, lbg, ubg, hist
         self.construct("registro", {})
+        self.reiniciar(None)
+
+    def reiniciar(self, paciencia):
+        """Estado de la paciencia por resolución; no toca el historial ni las cotas."""
+        self.paciencia, self.mejora_min = paciencia, 1e-4
+        self.mejor, self.mejor_f, self.sin, self.parado, self.n_iter = None, np.inf, 0, False, 0
 
     def get_n_in(self):
         return ca.nlpsol_n_out()
@@ -58,6 +68,16 @@ class _Registro(ca.Callback):
         viol = max(0.0, np.max(self.lbg - gv), np.max(gv - self.ubg))
         if self.hist is not None:
             self.hist.registrar(float(d["f"]), viol, np.asarray(d["x"]).ravel()[:8])
+        self.n_iter += 1
+        if self.paciencia:
+            f = float(d["f"])
+            if viol <= 1e-3 and f < self.mejor_f - self.mejora_min:
+                self.mejor, self.mejor_f, self.sin = {k: np.asarray(v) for k, v in d.items()}, f, 0
+            else:
+                self.sin += 1
+            if self.sin >= self.paciencia and self.mejor is not None:
+                self.parado = True
+                raise _Paciencia()
         return [0]
 
 
@@ -234,7 +254,7 @@ class ProblemaDirecto:
             w0 += list(np.cumsum((d[:-1] + d[1:]) * np.diff(self.t)) / (10 * self.t[-1]))
         return np.array(w0 + [0.6] * self.n_extra)
 
-    def resolver(self, th0, hist=None, reserva=None, cota_V=None):
+    def resolver(self, th0, hist=None, reserva=None, cota_V=None, paciencia=None):
         lbg, ubg = self.lbg, self.ubg.copy()
         if cota_V is not None:
             cota_V = np.asarray(cota_V, float)
@@ -258,8 +278,15 @@ class ProblemaDirecto:
         for vuelta in range(6):
             solver = self.solver if vuelta == 0 else self.solver_tibio
             duales = {} if vuelta == 0 else {"lam_x0": sol["lam_x"], "lam_g0": sol["lam_g"]}
-            sol = solver(x0=w0, lbx=self.lbw, ubx=self.ubw, lbg=lbg, ubg=ubg, p=pz.ravel(order="F"), **duales)
-            st = solver.stats()
+            self.cb.reiniciar(paciencia)
+            try:
+                sol = solver(x0=w0, lbx=self.lbw, ubx=self.ubw, lbg=lbg, ubg=ubg, p=pz.ravel(order="F"), **duales)
+                st = solver.stats()
+            except Exception:
+                if not self.cb.parado:
+                    raise
+                sol = self.cb.mejor
+                st = {"return_status": "Paciencia", "success": True, "iter_count": self.cb.n_iter}
             log_vueltas.append((st["iter_count"], st["return_status"], time.perf_counter() - t1))
             n_iter += st["iter_count"]
             w0 = np.asarray(sol["x"]).ravel()
