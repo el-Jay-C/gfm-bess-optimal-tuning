@@ -646,6 +646,8 @@ def exp_optimos():
         f = fact.iloc[0]
         filas.append({"sintonia": nombre, "modo": modo, "escenario": esc[k]["nombre"], **{n: f[n] for n in TH}})
 
+    f1 = pd.read_csv(R / "corridas_F1.csv")
+    agregar(f1, "F1_articulo", "R", J="J_real", viol="viol_real")
     mod = pd.read_csv(R / "modos.csv")
     rob = pd.read_csv(R / "robusto.csv")
     agregar(rob[(rob.sintonia == "opt_R_S3") & (rob.modo == "R")], "opt_R_S3", "R", k=2)

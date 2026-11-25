@@ -1,0 +1,150 @@
+# Parámetros únicos del caso de estudio (los leen Julia y Python).
+# Unidades: indicadas en cada línea. "pu" sin más = base propia del equipo.
+# Referencias normativas: NTSyCS 2026 (Res. Ex. CNE N°45) y su Anexo Técnico IBR (AT-IBR).
+
+[sistema]
+f0 = 50.0          # Hz, frecuencia nominal (NTSyCS)
+Sb = 100.0         # MVA, base del sistema
+Vb = 230.0         # kV, base de tensión de la fuente del sistema de 5 barras (ST 200-500 kV)
+
+# Líneas: datos de secuencia positiva por km (Tabla I del informe; Kumari et al. 2021,
+# basados en Bhandakkar y Mathew 2017, sistema de 5 barras de Stagg y El-Abiad).
+# [desde, hasta, largo_km, R_ohm_km, L_H_km, C_F_km]
+[red]
+lineas = [
+  [1, 2, 47.0, 0.22, 0.0017, 6.3e-9],
+  [1, 3, 87.0, 0.48, 0.0038, 2.87e-9],
+  [2, 3, 67.0, 0.46, 0.0037, 2.97e-9],
+  [2, 4, 67.0, 0.46, 0.0037, 2.97e-9],
+  [2, 5, 47.0, 0.44, 0.0035, 3.15e-9],
+  [3, 4, 19.0, 0.27, 0.0021, 5.14e-9],
+  [4, 5, 87.0, 0.48, 0.0038, 2.87e-9],
+]
+# Consumos por barra (MW, Mvar) del sistema de Stagg y El-Abiad, modelados como impedancia constante.
+carga_P = [0.0, 20.0, 45.0, 40.0, 60.0]
+carga_Q = [0.0, 10.0, 15.0, 5.0, 10.0]
+frac_P = 0.5               # fracción de la carga (y del escalón) a potencia constante; el resto, impedancia constante
+V_slack = 1.04     # pu, barra 1 (máquina síncrona). Consignas escalonadas (1,04 / 1,025 / 1,015) para que la
+                   # potencia reactiva se reparta entre las tres fuentes sin circulación entre ellas.
+
+[sg]               # Máquina síncrona térmica equivalente en barra 1 (modelo clásico + gobernador con recalentador)
+barra = 1
+S = 120.0          # MVA
+H = 3.5            # s
+xd_p = 0.25        # pu, reactancia transitoria
+D = 1.0            # pu, amortiguamiento mecánico
+R = 0.05           # pu, estatismo 5 % (NTSyCS Art. 3-13: 4-8 % unidades sincrónicas no hidráulicas)
+TG = 0.2           # s, gobernador
+TR = 7.0           # s, recalentador
+FH = 0.3           # fracción de potencia de la turbina de alta presión
+
+[gfm]              # Dos inversores GFM (VSG) con BESS. Índice 1 = barra 2 (BESS), 2 = barra 3 (FV + BESS)
+nombres = ["GFM1", "GFM2"]
+barra = [2, 3]
+S = [60.0, 60.0]           # MVA, potencia aparente del inversor
+P0 = [40.0, 45.0]          # MW, consigna (GFM1 = generador de 40 MW de la barra 2 de la fuente)
+V0 = [1.025, 1.015]        # pu, consigna de tensión (barra PV en el flujo de potencia)
+P_fv = [0.0, 45.0]         # MW, generación FV en MPPT (constante durante el evento)
+Xf = [0.15, 0.15]          # pu, reactancia de acoplamiento (filtro + transformador)
+tau_q = [0.02, 0.02]       # s, filtro de medición de Q
+R_conv = [0.01, 0.01]      # pu, pérdidas del convertidor  p_loss = R_conv |i|^2
+# Capacidad de sobrecorriente (AT-IBR Art. 3-1 d): por diseño, al menos 1,3 pu durante 5 s. Es una capacidad
+# mínima de diseño. La generalizamos (supuesto de modelamiento) como un presupuesto térmico I²t:
+#   dϑ/dt = max(i² - I_cont², 0),  B = (I_max² - I_cont²)·t_sobrecorriente,
+# de modo que 1,3 pu se sostiene 5 s y una sobrecarga menor se sostiene proporcionalmente más tiempo.
+I_max = 1.3                # pu, corriente máxima (límite del equipo)
+I_cont = 1.0               # pu, corriente nominal permanente
+t_sobrecorriente = 5.0     # s, duración de I_max que fija el presupuesto térmico
+# Limitador de sobrecarga: un lazo integral reduce la consigna de potencia del VSG mientras la corriente supere
+# el límite vigente (I_max con presupuesto térmico disponible, I_cont al agotarse) o el BESS supere su potencia
+# nominal. La corriente del banco admite i_max [bess] de forma transitoria.
+k_lim = 4.0 # 1/s, ganancia integral del limitador (pu de potencia por pu de corriente y segundo)
+kp_lim = 0.5               # pu, ganancia proporcional del limitador (Du et al. 2019; kp = kpp·D/ωb, kpp ≈ 3 rad/s)
+tau_lib = 2.0              # s, liberación de la reducción de consigna cuando la corriente vuelve bajo el límite
+eps_i = 0.01               # pu, ancho de suavizado de la corriente
+eps_th = 0.005             # pu², ancho de suavizado del integrando térmico
+margen_th = 1.0            # el límite pasa de I_max a I_cont en torno a ϑ = margen_th·B (mismo presupuesto que ϑ ≤ B)
+ancho_th = 0.02            # fracción de B en que el límite pasa de I_max a I_cont
+n_sep = 5.0                # separación de escalas: el lazo Q-V debe ser n_sep veces más lento que el filtro tau_q
+
+[bess]             # Modelo Thevenin de 1er orden por unidad en base propia del BESS
+P_nom = [60.0, 20.0]       # MW
+E_h = [1.0, 1.0]           # h de autonomía a potencia nominal
+SOC0 = [0.5, 0.5]
+SOC_min = 0.1
+SOC_max = 0.9
+ocv0 = 0.9                 # pu, OCV(SOC) = ocv0 + ocv1*SOC
+ocv1 = 0.2
+R0 = 0.03                  # pu, resistencia óhmica
+R1 = 0.02                  # pu, rama RC (polarización)
+tau1 = 20.0                # s, constante de tiempo R1*C1
+eta_c = 0.97               # eficiencia coulómbica de carga
+i_max = 1.2                # pu, corriente máxima del banco (C-rate)
+v_min = 0.85               # pu, tensión mínima en bornes del banco
+reserva = 0.05             # fracción de la energía nominal reservada para el servicio de frecuencia
+                           # (E_res = reserva·P_nom·E_h: 10 800 MWs y 3 600 MWs)
+T_servicio = 300.0         # s, tiempo que debe sostenerse la respuesta primaria hasta el relevo del control
+                           # secundario (supuesto de modelamiento)
+
+[norma]            # Límites de desempeño
+f_min_perm = 49.0          # Hz, operación permanente 49-51 Hz (NTSyCS Art. 3-10)
+rocof_max = 2.0            # Hz/s, medido en ventana de 500 ms (NTSyCS Art. 3-10 c)
+ventana_rocof = 0.5        # s
+V_min_alerta = 0.93        # pu, ST 200-500 kV en estado de alerta (NTSyCS Art. 5-23)
+V_max_alerta = 1.07
+V_min_normal = 0.95        # pu, ST 200-500 kV en estado normal (NTSyCS Art. 5-19)
+V_max_normal = 1.05
+dP_diseno = 50.0           # MW, contingencia de diseño para el requisito de inercia
+t_crec_tension = 1.0       # s, tiempo de crecimiento del controlador de tensión (AT-IBR Art. 3-3 e)
+
+[optimizacion]
+T = 30.0                   # s, horizonte de simulación (unas 4 constantes de tiempo del recalentador)
+# Malla no uniforme: [instante final, paso]. Los pasos dividen la ventana de RoCoF (0,5 s).
+malla = [[3.0, 0.025], [30.0, 0.05]]
+# Variables por GFM: H [s], D [pu] (estatismo 2-5 %, AT-IBR Art. 3-6), Kq [pu] (estatismo de tensión 2-10 %, AT-IBR Art. 3-3), K [1/s]
+H_lim = [0.5, 10.0]
+D_lim = [20.0, 50.0]
+Kq_lim = [10.0, 50.0]
+K_lim = [0.05, 5.0]        # cota amplia: K queda limitada por R9 (rapidez mínima y separación de escalas)
+theta_inicial = [3.0, 3.0, 25.0, 25.0, 20.0, 20.0, 1.0, 1.0]   # [H1 H2 D1 D2 Kq1 Kq2 K1 K2]
+# Objetivo J = wf*dfmax/df_ref + wl*perdidas, con cota de vdev por escenario
+wf = 1.0
+wv = 0.0
+zeta_min = 0.10           # amortiguamiento mínimo de diseño (NTSyCS Art. 5-44, por analogía), en R y en L
+wl = 0.1
+df_ref = 1.0               # Hz
+dV_ref = 0.05              # pu
+
+# Escenarios: escalón de carga [barra, MW], SOC inicial, FV disponible en el GFM2 [MW] y probabilidad (F7).
+# La contingencia de diseño es de 50 MW, la misma que fija el requisito de inercia (R7).
+[[escenario]]
+nombre = "S1_carga_b5"
+prob = 0.45
+barra = 5
+dP = 50.0
+SOC0 = [0.5, 0.5]
+P_fv2 = 45.0
+
+[[escenario]]
+nombre = "S2_carga_b4"
+prob = 0.25
+barra = 4
+dP = 50.0
+SOC0 = [0.5, 0.5]
+P_fv2 = 45.0
+
+[[escenario]]             # día nublado y batería baja: el BESS2 ya cubre 10 MW antes del evento
+nombre = "S3_FV_baja"
+prob = 0.2
+barra = 5
+dP = 30.0
+SOC0 = [0.2, 0.2]
+P_fv2 = 35.0
+
+[[escenario]]             # caso duro: contingencia de diseño con la batería baja
+nombre = "S4_SOC_bajo"
+prob = 0.1
+barra = 5
+dP = 50.0
+SOC0 = [0.2, 0.2]
+P_fv2 = 45.0
