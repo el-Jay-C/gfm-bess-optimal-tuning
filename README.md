@@ -47,7 +47,7 @@ El proyecto es **100 % portable** (Linux, macOS y Windows) sin rutas absolutas n
 - **`--workers` (por defecto `0` / `GFM_WORKERS`):** autodetecta la mitad de los hilos de CPU vía `os.cpu_count()` para levantar un pool thread-safe de procesos `julia/servidor.jl` (`OraculoJulia`) consumido en paralelo por `ThreadPoolExecutor` en multiarranques de `F2`/`F3`.
 - **Certificados SDP (`cert`):** usa `ProcessPoolExecutor` hasta `os.cpu_count()` procesos para aislar el estado global de CasADi de forma segura bajo `fork` (Linux/macOS) y `spawn` (Windows).
 - **Validación masiva (`julia/validar.jl`):** paraleliza con `Threads.@threads` (activado con `julia --threads=auto`) manteniendo determinismo en las muestras de Monte Carlo.
-- **Script maestro (`ejecutar_todo.sh`):** autodetecta el entorno Python relativo y escala `JOBS` automáticamente según los núcleos disponibles.
+- **Script maestro (`ejecutar_todo.sh`):** autodetecta el entorno Python relativo y corre hasta siete experimentos a la vez (`xargs -P 7`), cada uno con un hilo.
 
 ---
 
@@ -118,70 +118,108 @@ julia --project=julia julia/test_modelo.jl
 .venv/bin/python python/test_consistencia.py      # En Windows: .\.venv\Scripts\python.exe python/test_consistencia.py
 ```
 
-### B. Pipeline completo automático (Linux / macOS)
+### B. Lote completo v4 (Linux / macOS)
 ```bash
 ./ejecutar_todo.sh
-# Puedes sobrescribir el intérprete o nivel de concurrencia si lo deseas:
-# PY=.venv/bin/python JOBS=4 ./ejecutar_todo.sh
+# Para fijar el intérprete:
+# PY=.venv/bin/python ./ejecutar_todo.sh
 ```
-El script autodetecta los núcleos disponibles, ejecuta en paralelo los experimentos independientes con `--workers 1` por proceso, corre luego `malla`, `optimos`, `cert` y `julia --threads=auto --project=julia julia/validar.jl`, y escribe `resultados/logs/TERMINADO` al terminar. Los experimentos `conv` y `malla` reanudan corridas ya guardadas; para repetir desde cero, respalda o limpia `resultados/`.
+El script lanza hasta **siete procesos simultáneos** (`xargs -P 7`), cada uno con `--workers 1` y un hilo de
+BLAS y de Julia, en tres fases:
 
-### C. Ejecución comando por comando (Windows PowerShell o corridas individuales)
-Al ejecutar un experimento individualmente sin paralelismo externo (`xargs`), omitir `--workers` (o usar `--workers 0`) activa automáticamente el pool paralelo según los núcleos de tu equipo:
+1. `rango` (`L_todos`, `L_S1`, `R_S3`) y luego `kappa` (elección de $\kappa^\star$).
+2. `conv` con F4, F2 y F1 (20 arranques cada uno, F2 y F4 con parada temprana de paciencia 5), `robusto`,
+   `barridos`, `ablacion`, `modos`, `pareto`, `fase1` y las nueve sensibilidades `sens --caso ...`
+   (`sens` espera a que termine `robusto`).
+3. `malla`, `optimos`, `cert` y `julia/validar.jl`.
 
-```powershell
-$pyGfm = '.\.venv\Scripts\python.exe'
-& $pyGfm python/ejecutar_experimentos.py conv --metodo F1 --n 10
-& $pyGfm python/ejecutar_experimentos.py conv --metodo F2 --n 20
-& $pyGfm python/ejecutar_experimentos.py conv --metodo F3 --n 20
-& $pyGfm python/ejecutar_experimentos.py conv --metodo F4 --n 20
-& $pyGfm python/ejecutar_experimentos.py conv --metodo F4b --n 4
-& $pyGfm python/ejecutar_experimentos.py conv --metodo F5 --n 10
-& $pyGfm python/ejecutar_experimentos.py modos --n 6
-& $pyGfm python/ejecutar_experimentos.py ablacion --n 6
-& $pyGfm python/ejecutar_experimentos.py pesos --n 6
-& $pyGfm python/ejecutar_experimentos.py barridos --n 3
-& $pyGfm python/ejecutar_experimentos.py robusto --n 6
-& $pyGfm python/ejecutar_experimentos.py malla
-& $pyGfm python/ejecutar_experimentos.py optimos
-& $pyGfm python/ejecutar_experimentos.py cert
+Al terminar escribe `resultados/logs/TERMINADO`, o `resultados/logs/FALLIDOS` con las tareas que no
+llegaron a `Listo`. Cada experimento escribe su log en `resultados/logs/v4_*.log`. `conv` y `malla` reanudan
+las corridas ya guardadas; para repetir desde cero, respalda o limpia `resultados/`.
+
+En el computador del proyecto (6 núcleos, 12 hilos) el lote completo tomó unas **7 h**.
+
+### C. F4 sin parada temprana (fila de control de la tabla de convergencia)
+No forma parte de `ejecutar_todo.sh`. Se reparte en siete procesos con `--parte i/7` y luego se juntan las
+partes:
+```bash
+for i in 0 1 2 3 4 5 6; do
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 JULIA_NUM_THREADS=1 \
+  .venv/bin/python python/ejecutar_experimentos.py conv --metodo F4 --n 20 --paciencia 0 --parte $i/7 \
+    --workers 1 > resultados/logs/v4_conv_F4_sin_paciencia_parte$i.log 2>&1 &
+done
+wait
+mkdir -p resultados/partes_F4_sin_paciencia
+mv resultados/*_F4_sin_paciencia_parte*.csv resultados/partes_F4_sin_paciencia/
+.venv/bin/python - <<'PY'
+import glob, pandas as pd
+for t in ("corridas", "conv"):
+    partes = sorted(glob.glob(f"resultados/partes_F4_sin_paciencia/{t}_F4_sin_paciencia_parte*.csv"))
+    pd.concat(map(pd.read_csv, partes)).sort_values("corrida").to_csv(f"resultados/{t}_F4_sin_paciencia.csv", index=False)
+PY
+```
+Tomó unos 22 min. `--paciencia 0` desactiva la parada temprana (sirve también con F2); `--parte i/m` corre
+sólo las corridas `k` con `k % m == i` y agrega el sufijo `_parte{i}` a los archivos.
+
+### D. Ejecución comando por comando
+Sin paralelismo externo, omitir `--workers` (o `--workers 0`) usa la mitad de los hilos de la CPU:
+
+```bash
+PY=.venv/bin/python        # En Windows: $PY = '.\.venv\Scripts\python.exe'
+$PY python/ejecutar_experimentos.py rango --problema L_todos --n 6   # también L_S1 y R_S3
+$PY python/ejecutar_experimentos.py kappa
+$PY python/ejecutar_experimentos.py conv --metodo F1 --n 20          # también F2 y F4
+$PY python/ejecutar_experimentos.py robusto --n 3
+$PY python/ejecutar_experimentos.py barridos --n 3
+$PY python/ejecutar_experimentos.py ablacion --n 4
+$PY python/ejecutar_experimentos.py modos --n 6
+$PY python/ejecutar_experimentos.py pareto --n 4
+$PY python/ejecutar_experimentos.py fase1 --n 6
+$PY python/ejecutar_experimentos.py sens --caso kp0 --n 2           # klim1 klim4 kp0 kp1 fracP0 fracP1 Kqmin5 nsep3 nsep8
+$PY python/ejecutar_experimentos.py malla
+$PY python/ejecutar_experimentos.py optimos
+$PY python/ejecutar_experimentos.py cert
 julia --threads=auto --project=julia julia/validar.jl
 ```
 
-### D. Figuras y tablas
+### E. Figuras y tablas
 ```bash
-# Especifica una carpeta local de salida (ej. resultados/figuras y resultados/tablas):
 .venv/bin/python python/graficar.py resultados/figuras
 .venv/bin/python python/resumen.py resultados/tablas
 ```
-(Si no se pasa argumento, `graficar.py` y `resumen.py` escriben en `../Informe/figuras` y `../Informe/tablas` respectivamente).
+Sin argumento, `graficar.py` y `resumen.py` escriben en `../Informe/figuras` y `../Informe/tablas`.
 
 ---
 
-## 6. CSV producidos y tiempos orientativos
+## 6. De qué CSV sale cada tabla y figura del informe final
 
-| Comando | CSV generado en `resultados/` | Tiempo orientativo |
-|---|---|---|
-| `conv --metodo M` | `corridas_M.csv`, `conv_M.csv` | Medianas por corrida: F1 29,4 s; F2 10,0 s; F3 162,6 s; F4 79,4 s; F4b 507,5 s; F5 121,1 s. |
-| `modos` | `modos.csv` | Minutos; compara Modo R vs. Modo L (SQP/colocación y multiplicadores KKT). |
-| `ablacion` | `ablacion.csv` | Decenas de minutos; agrega grupos de restricciones (`R2` a `R9`) paso a paso. |
-| `pesos` | `pesos.csv` | Decenas de minutos; sensibilidad a $(w_v, w_l)$ y casos con $K_q$ fijo. |
-| `barridos` | `barridos.csv` | Decenas de minutos; barrido de reserva $\rho$ (multiplicadores vs. diferencias) y tamaño de escalón R/L. |
-| `robusto` | `robusto.csv` | Decenas de minutos; óptimos por escenario, `minmax`, `esperado`, `cvar80`, `afin_minmax` y `minmax_F4`. |
-| `malla` | `malla.csv` | Minutos; factores $\times 1, \times 2, \times 4$ (resolución 29,8 / 161,4 / 300,9 s más construcción). |
-| `optimos` | `optimos.csv` | Segundos; consolida las 8 sintonías finales comparadas. |
-| `cert` | `certificados.csv` | Segundos–minutos; amortiguamiento por autovalores y LMI de Lyapunov común. |
-| `julia/validar.jl` | `validacion.csv`, `validacion_densa.csv`, `largo_plazo.csv`, `escalon_tension.csv`, `fuera_muestra.csv`, `trayectorias.csv` | Minutos, según núcleos disponibles (`--threads=auto`). |
+Todos los parámetros están en `datos/parametros.toml`.
 
-Los tiempos provienen de `corridas_F*.csv` y `malla.csv` medidos con procesos simultáneos en un procesador de 6 núcleos (12 hilos); el lote completo toma aproximadamente 2–4 horas en paralelo según la máquina.
+| Informe final | CSV en `resultados/` |
+|---|---|
+| Tabla IV (ablación) | `ablacion.csv` |
+| Tabla V (sintonías finales) | `optimos.csv`, `validacion.csv`, `certificados.csv` |
+| Tabla VI y Fig. 3 (convergencia) | `corridas_F1.csv`, `corridas_F2.csv`, `corridas_F4.csv`, `corridas_F4_sin_paciencia.csv` y sus `conv_*.csv` |
+| Tabla VII (una sintonía para S1–S4) | `robusto.csv`, `validacion.csv`, `fuera_muestra.csv` |
+| Tabla VIII (sensibilidad) | `sens_*.csv` |
+| Fig. 2 (trayectorias) | `trayectorias.csv` (de `validar.jl`) |
+| Fig. 4 (barridos) | `barridos.csv` |
+| Validación de la solución | `malla.csv`, `validacion_densa.csv`, `largo_plazo.csv`, `escalon_tension.csv`, `certificados.csv` |
+
+Tiempos medianos por corrida en la comparación de convergencia: F1 415 s, F2 10 s, F4 127 s (con parada
+temprana) y 371 s (sin ella), medidos con siete procesos simultáneos; sirven para comparar métodos, no como
+valores absolutos.
 
 ---
 
-## 7. Lectura correcta de los resultados conservados
+## 7. Lectura correcta de los resultados
 
-- `optimos.csv` consolida el óptimo R de colocación (`F4`, $J = 0{,}63357$ sin limitador), no confundirlo con el óptimo R de SQP en `modos.csv` ($J = 0{,}63164$).
-- La tabla generada para sintonías combina métricas **con** limitador activo y la violación máxima de trayectoria **sin** limitador; la tabla de ablación reporta la violación de cada etapa y `viol_P` del problema completo.
-- `validacion_densa.csv` y el campo `factible` de `fuera_muestra.csv` verifican trayectorias sin limitador y no incluyen cotas de ganancias ni `R7`–`R9`; por ello no certifican factibilidad completa en Modo L ni para la regla afín.
-- La etapa `R7`–`R8` de `ablacion.csv` y los criterios de sintonía única (`minmax`, `esperado`, `cvar80`, `minmax_F4` que alcanzó límite de CPU) resultaron infactibles; no interpretar sus costos como óptimos admisibles.
-- La regla afín (`afin_minmax`) es factible en la malla de diseño, pero presenta una violación de $0{,}2523\,\%$ en malla densa de 1 ms en S2, amortiguamiento mínimo de $4{,}82\,\%$ (< $5\,\%$) y tasa común `-inf` (con advertencia numérica en `certificados.csv`); esto indica ausencia de certificado común aceptado, no una demostración de inestabilidad.
-- A $T_s = 300\text{ s}$ no se observa un segundo descenso apreciable de frecuencia ni agotamiento del presupuesto térmico en los escenarios evaluados.
+- Una sintonía es factible si su violación relativa, re-evaluada en Julia con todas las restricciones, no
+  supera `1e-3`. Leer `viol_real` con precisión completa: valores como `5.6e-11` son factibles.
+- `resultados/descartados_F4_ultimo_iterado/` guarda las corridas de F4 anteriores a la corrección de
+  `form_directa.py` (devolvían el último iterado en vez del mejor punto guardado); `descartados_sin_paciencia/`
+  guarda una comparación antigua. Ninguna de las dos se usa en el informe.
+- En `corridas_F4_sin_paciencia.csv`, las corridas 6 y 8 convergen pero superan el tope de 600 s tras un
+  solo corte de R12 y quedan con $\zeta = 6{,}8\,\%$; por eso son infactibles.
+- Los criterios `minmax`, `esperado` y `cvar80` de `robusto.csv` dan la misma sintonía: el conjunto factible
+  se reduce a un vértice.
