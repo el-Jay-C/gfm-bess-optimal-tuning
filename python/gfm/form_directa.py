@@ -285,6 +285,7 @@ class ProblemaDirecto:
             except Exception:
                 if not self.cb.parado:
                     raise
+            if self.cb.parado:  # CasADi captura la excepción de la callback y entrega el último iterado
                 sol = self.cb.mejor
                 st = {"return_status": "Paciencia", "success": True, "iter_count": self.cb.n_iter}
             log_vueltas.append((st["iter_count"], st["return_status"], time.perf_counter() - t1))
@@ -309,7 +310,7 @@ class ProblemaDirecto:
             n_cortes += nuevos
         t_s = time.perf_counter() - t1
         lam = np.asarray(sol["lam_g"]).ravel()
-        r = {"th": th, "J": float(sol["f"]), "estado": st["return_status"], "iter": n_iter,
+        r = {"th": th, "J": float(np.ravel(sol["f"])[0]), "estado": st["return_status"], "iter": n_iter,
              "exito": bool(st["success"] and (not self.zeta_min or min(zetas) >= self.zeta_min * (1 - 1e-3))),
              "t_s": t_s, "t_inicial_s": t1 - t0, "t_limite_s": self.t_limite_s,
              "n_cortes": n_cortes, "zeta": zetas, "vueltas": log_vueltas,

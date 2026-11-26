@@ -20,7 +20,7 @@ plt.rcParams.update({"font.size": 7, "axes.edgecolor": "#8a8984", "axes.labelcol
                      "axes.spines.right": False, "lines.linewidth": 1.4, "legend.frameon": False,
                      "savefig.bbox": "tight", "font.family": "serif"})
 ETIQ = {"F1": "F1 (artículo) (SQP+PSO)", "F2": "F2 SQP", "F3": "F3 PSO",
-        "F4": "F4 colocación", "F4b": "F4b colocación L-BFGS", "F5": "F5 disparo múltiple"}
+        "F4": "F4 colocación", "F4_sin_paciencia": "F4 sin parada temprana", "F4b": "F4b colocación L-BFGS", "F5": "F5 disparo múltiple"}
 
 
 def leer(nombre):
@@ -48,8 +48,8 @@ if tr.empty:
     pendiente("trayectorias_final.pdf")
 else:
     fig, axs = plt.subplots(3, 1, figsize=(3.5, 4.2), sharex=True)
-    for k, (s, etiqueta) in enumerate([("inicial", "θ₀"), ("F1_articulo", "F1 (artículo)"),
-                                         ("opt_R", "óptimo R"), ("opt_L", "óptimo L")]):
+    for k, (s, etiqueta) in enumerate([("inicial", "θ₀"), ("opt_L", "óptimo L (S1)"),
+                                         ("minmax_L", "única S1–S4")]):
         for lim in ([1, 0] if s == "F1_articulo" else [1]):
             g = tr[(tr.sintonia == s) & (tr.lim == lim)].sort_values("t")
             if g.empty:

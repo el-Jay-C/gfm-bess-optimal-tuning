@@ -347,7 +347,13 @@ def exp_conv():
     met, e0 = args.metodo, esc[0]["nombre"]
     ths = semillas()
     cv = cota("L_S1", [0])
-    f_conv, f_corr = R / f"conv_{met}.csv", R / f"corridas_{met}.csv"
+    pac = args.paciencia or None                         # 0 = sin early stopping
+    suf = ("" if pac == PACIENCIA else "_sin_paciencia" if pac is None else f"_pac{pac}")
+    if args.parte:                                       # "i/m": sólo las corridas k con k % m == i
+        i, m = map(int, args.parte.split("/"))
+        ths = [th if k % m == i else None for k, th in enumerate(ths)]
+        suf += f"_parte{i}"
+    f_conv, f_corr = R / f"conv_{met}{suf}.csv", R / f"corridas_{met}{suf}.csv"
     conv, corr = [], []
     if f_corr.exists() and f_conv.exists():
         prev = pd.read_csv(f_corr)
@@ -380,7 +386,7 @@ def exp_conv():
 
         if met in ("F1", "F2", "F3"):
             for k, th0 in enumerate(ths):
-                if k in hechas:
+                if k in hechas or th0 is None:
                     continue
                 orac.cache.clear()                              # sin memoria entre corridas: tiempos comparables
                 orac.n_eval = 0
@@ -388,25 +394,25 @@ def exp_conv():
                 if met == "F1":
                     th = fs.f1_paper(orac, p, c, 0, h, semilla=k, th0=th0)
                 else:
-                    th = ref.theta(fs.f2_sqp(ref, th0, h, paciencia=PACIENCIA) if met == "F2"
+                    th = ref.theta(fs.f2_sqp(ref, th0, h, paciencia=pac) if met == "F2"
                                    else fs.f3_pso(ref, h, semilla=k, th0=th0))
                 cerrar(h, k, th, h.t, n_eval=orac.n_eval, t_solver_s=h.t,
-                       paciencia=PACIENCIA if met == "F2" else None)
+                       paciencia=pac if met == "F2" else None)
         else:
-            if len(hechas.intersection(range(len(ths)))) == len(ths):
+            if all(k in hechas or th0 is None for k, th0 in enumerate(ths)):
                 return
             cfg = {"F4": dict(metodo="trapecio"), "F4b": dict(metodo="trapecio", hess="lbfgs", max_iter=500),
                    "F5": dict(metodo="disparo", max_iter=250)}[met]
             P = form_directa.ProblemaDirecto(p, c, [esc[0]], modo="L", **cfg)
             log(f"{met}: NLP construido en {P.t_construccion:.1f} s ({P.nw} variables, {P.ng} restricciones)")
             for k, th0 in enumerate(ths):
-                if k in hechas:
+                if k in hechas or th0 is None:
                     continue
                 h = Historial(met, k, e0)
-                r = P.resolver(th0, h, cota_V=cv, paciencia=PACIENCIA)
+                r = P.resolver(th0, h, cota_V=cv, paciencia=pac)
                 cerrar(h, k, r["th"], r["t_inicial_s"] + r["t_s"], t_solver_s=r["t_s"], t_inicial_s=r["t_inicial_s"],
                        t_construccion_s=r["t_construccion_s"], n_var=r["n_var"], n_res=r["n_res"],
-                       estado=r["estado"], exito=r["exito"], J_modelo=r["J"], zeta=r["zeta"][0], paciencia=PACIENCIA,
+                       estado=r["estado"], exito=r["exito"], J_modelo=r["J"], zeta=r["zeta"][0], paciencia=pac,
                        n_cortes=r["n_cortes"], lam_zeta=r["lam_zeta"], t_limite_s=r["t_limite_s"])
 
 
@@ -706,6 +712,8 @@ def main():
     ap.add_argument("--n", type=int, default=20)
     ap.add_argument("--problema", choices=PROBLEMAS)
     ap.add_argument("--caso", choices=SENS)
+    ap.add_argument("--paciencia", type=int, default=PACIENCIA, help="conv: early stopping (0 = sin él)")
+    ap.add_argument("--parte", default=None, help="conv: i/m corre sólo las corridas k con k %% m == i")
     ap.add_argument("--res", default=None, help="carpeta de resultados (por defecto resultados/)")
     ap.add_argument("--workers", type=int, default=int(os.environ.get("GFM_WORKERS", "0")),
                     help="procesos de Julia en paralelo (0 = mitad de hilos de CPU)")
